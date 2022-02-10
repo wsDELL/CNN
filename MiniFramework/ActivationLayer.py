@@ -12,6 +12,10 @@ class ActivationLayer(layer):
         self.a = None
         self.activator = activator
         self.output_shape = None
+        self.name = None
+
+    def initialize(self, folder, name):
+        self.name = name
 
     def forward(self, input_v, train=True):
         self.input_v = input_v

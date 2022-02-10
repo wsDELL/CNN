@@ -9,6 +9,10 @@ class DropoutLayer(layer):
         self.output_size = input_size
         self.mask = None
         self.output_v = None
+        self.name = None
+
+    def initialize(self, folder, name):
+        self.name = None
 
     def forward(self, input_v: np.ndarray, train=True):
         assert (input_v.ndim == 2)

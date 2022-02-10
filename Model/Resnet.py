@@ -15,7 +15,7 @@ def con1x1(in_planes: int, out_planes: int, param, stride: int = 1, ) -> MiniFra
 class BasicBlock(MiniFramework.NeuralNet):
     expansion = 1
 
-    def __init__(self, in_planes, planes, stride, param, layer_name, downsample:dict=None):
+    def __init__(self, in_planes, planes, stride, param, layer_name, downsample: dict = None):
         super().__init__(param, layer_name)
 
         self.add_layer(conv3x3(in_planes, planes, param=param, stride=stride), layer_name + "_con1")
@@ -25,25 +25,32 @@ class BasicBlock(MiniFramework.NeuralNet):
         self.add_layer(BatchNormalLayer(planes), layer_name + "_bn2")
         self.downsample = downsample
         if self.downsample is not None:
-            self.downsample_status=True
+            self.downsample_status = True
             for name in list(downsample.keys()):
-                self.add_layers(downsample[name],layer_name+"_"+name)
+                self.add_layers(downsample[name], layer_name + "_" + name)
         else:
             self.downsample_status = False
-        self.add_layer(ActivationLayer(ReLU()),layer_name+"_relu2")
+        self.add_layer(ActivationLayer(ReLU()), layer_name + "_relu2")
         self.stride = stride
 
     def forward(self, input_v, train=True):
         output = None
-        layer_name = self.layer_list[0].name
+        residual = input_v
+        layer_name: str = self.layer_list[0].name
         if self.downsample_status is True:
             for i in range(self.layer_count):
-                output = self.layer_list[i].forward(input_v, train)
-
-                input_v = output
-
-
-
+                if layer_name[-15:] == "_downsample_con":
+                    residual = self.layer_list[i].forward(input_v, train)
+                if layer_name[-14:] == "_downsample_bn":
+                    residual = self.layer_list[i].forward(residual, train)
+                    output = output + residual
+                else:
+                    output = self.layer_list[i].forward(input_v, train)
+        else:
+            for j in range(self.layer_count):
+                output = self.layer_list[j].forward(input_v, train)
+                if layer_name[-4:] == "_bn2":
+                    output = output + residual
         self.output_v = output
         return self.output_v
 
@@ -83,9 +90,9 @@ class ResNet(MiniFramework.NeuralNet):
         downsample = None
         if stride != 1 or self.in_planes != planes * block.expansion:
             downsample = {
-                "downsample_con": ConLayer(self.in_planes, planes * block.expansion, kernel_size=1, stride=stride,
-                                           hp=self.hp),
-                "downsample_bn": BatchNormalLayer(planes * block.expansion)}
+                "_downsample_con": ConLayer(self.in_planes, planes * block.expansion, kernel_size=1, stride=stride,
+                                            hp=self.hp),
+                "_downsample_bn": BatchNormalLayer(planes * block.expansion)}
 
         layers = []
         for stride in strides:
