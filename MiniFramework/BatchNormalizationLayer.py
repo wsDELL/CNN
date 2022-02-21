@@ -33,7 +33,15 @@ class BatchNormalLayer(layer):
         self.name = name
 
     def forward(self, input_v, train=True):
-        assert (input_v.ndim == 2 or input_v.ndim == 4)  # fc or cv
+        assert (input_v.ndim == 2 or input_v.ndim == 4)# fc or cv
+        if input_v.ndim == 4:
+            self.input_width = input_v.shape[2]
+            self.input_height = input_v.shape[3]
+            self.gamma = np.ones((1, self.input_size, self.input_width,self.input_height)).astype('float32')
+            self.beta = np.zeros((1, self.input_size, self.input_width,self.input_height)).astype('float32')
+            self.running_mean = np.zeros((1, self.input_size, self.input_width,self.input_height)).astype('float32')
+            self.running_variance = np.zeros((1, self.input_size, self.input_width,self.input_height)).astype('float32')
+
         self.input_v = input_v
 
         if train:

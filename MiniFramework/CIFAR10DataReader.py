@@ -17,9 +17,9 @@ class CIFAR10DataReader(object):
         self.YTrain = None  # training label set
         self.XTest = None  # test feature set
         self.YTest = None  # test label set
-        self.XTrainRaw = x_train  # training feature set before normalization
+        self.XTrainRaw = np.transpose(x_train, axes=(0, 3, 1, 2))  # training feature set before normalization
         self.YTrainRaw = y_train  # training label set before normalization
-        self.XTestRaw = x_test  # test feature set before normalization
+        self.XTestRaw = np.transpose(x_test, axes=(0, 3, 1, 2))  # test feature set before normalization
         self.YTestRaw = y_test  # test label set before normalization
         self.XDev = None  # validation feature set
         self.YDev = None  # validation lable set
@@ -30,6 +30,7 @@ class CIFAR10DataReader(object):
         #     data = np.load(self.train_file_name)
             self.XTrainRaw = self.XTrainRaw.astype('float32')
             self.YTrainRaw = self.YTrainRaw.astype('int32')
+            self.YTrainRaw = self.YTrainRaw.reshape(self.YTrainRaw.size,1)
             assert (self.XTrainRaw.shape[0] == self.YTrainRaw.shape[0])
             self.num_train = self.XTrainRaw.shape[0]
             self.num_feature = self.XTrainRaw.shape[1]
@@ -44,6 +45,7 @@ class CIFAR10DataReader(object):
         #     data = np.load(self.test_file_name)
             self.XTestRaw = self.XTestRaw.astype('float32')
             self.YTestRaw = self.YTestRaw.astype('int32')
+            self.YTestRaw = self.YTestRaw.reshape(self.YTestRaw.size,1)
             assert (self.XTestRaw.shape[0] == self.YTestRaw.shape[0])
             self.XTest = self.XTestRaw
             self.YTest = self.YTestRaw

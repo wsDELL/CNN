@@ -27,7 +27,7 @@ class BasicBlock(MiniFramework.NeuralNet):
         if self.downsample is not None:
             self.downsample_status = True
             for name in list(downsample.keys()):
-                self.add_layers(downsample[name], layer_name + "_" + name)
+                self.add_layer(downsample[name], layer_name + "_" + name)
         else:
             self.downsample_status = False
         self.add_layer(ActivationLayer(ReLU()), layer_name + "_relu2")
@@ -112,3 +112,4 @@ if __name__ == "__main__":
         optimizer_name=OptimizerName.Momentum)
 
     net = ResNet(params=params, model_name="ResNet", block=BasicBlock, num_blocks=[2, 2, 2, 2])
+    print("resnet")
