@@ -5,7 +5,8 @@ class InitialMethod(Enum):
     Zero = 0,
     Normal = 1,
     Xavier = 2,
-    MSRA = 3
+    MSRA = 3,
+    Kaiming = 4
 
 
 class OptimizerName(Enum):

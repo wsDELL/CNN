@@ -26,7 +26,7 @@ class VGG(NeuralNet):
                 M_count = M_count + 1
             else:
                 self.add_layer(ConLayer(in_channels, x, kernel_size=3, hp=self.hp, padding=1), name=f"con{con_count}")
-                self.add_layer(BatchNormalLayer(x), name=f"bn{con_count}")
+                # self.add_layer(BatchNormalLayer(x), name=f"bn{con_count}")
                 self.add_layer(ActivationLayer(ReLU()), name=f"relu{con_count}")
                 con_count = con_count + 1
                 in_channels = x

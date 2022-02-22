@@ -52,6 +52,8 @@ class WeightsBias(object):
         elif init_method == InitialMethod.Xavier:
             t = math.sqrt(6 / (num_output + num_input))
             W = np.random.uniform(-t, t, (num_input, num_output)).astype('float32')
+        elif init_method == InitialMethod.Kaiming:
+            pass
 
         return W
 

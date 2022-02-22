@@ -27,6 +27,7 @@ class BatchNormalLayer(layer):
         self.d_gamma = None
         self.result_file_name = ''
         self.name = None
+        self.counter = True
 
     def initialize(self, folder, name, create_new=False):
         self.result_file_name = f'{folder}/{name}_result.npz'
@@ -34,14 +35,14 @@ class BatchNormalLayer(layer):
 
     def forward(self, input_v, train=True):
         assert (input_v.ndim == 2 or input_v.ndim == 4)# fc or cv
-        if input_v.ndim == 4:
+        if input_v.ndim == 4 and self.counter is True:
             self.input_width = input_v.shape[2]
             self.input_height = input_v.shape[3]
             self.gamma = np.ones((1, self.input_size, self.input_width,self.input_height)).astype('float32')
             self.beta = np.zeros((1, self.input_size, self.input_width,self.input_height)).astype('float32')
             self.running_mean = np.zeros((1, self.input_size, self.input_width,self.input_height)).astype('float32')
             self.running_variance = np.zeros((1, self.input_size, self.input_width,self.input_height)).astype('float32')
-
+            self.counter = False
         self.input_v = input_v
 
         if train:

@@ -218,7 +218,7 @@ if __name__ == '__main__':
     time1 = time.time()
     num_output = 10
     max_epoch = 5
-    batch_size = 64
+    batch_size = 128
     learning_rate = 0.1
     params = HyperParameters(
         learning_rate, max_epoch, batch_size,
