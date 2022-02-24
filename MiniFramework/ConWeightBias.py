@@ -36,6 +36,22 @@ class ConWeightBias(WeightsBias):
         self.B = np.zeros((self.FilterCount, 1)).astype('float32')
 
 
+    def Rotate180(self):
+        self.WT = np.zeros(self.W.shape).astype(np.float32)
+        for i in range(self.FilterCount):
+            for j in range(self.KernalCount):
+                self.WT[i, j] = np.rot90(self.W[i, j], 2)
+        return self.WT
+
+    def ClearGrads(self):
+        self.dW = np.zeros(self.W.shape).astype(np.float32)
+        self.dB = np.zeros(self.B.shape).astype(np.float32)
+
+    def MeanGrads(self, m):
+        self.dW = self.dW / m
+        self.dB = self.dB / m
+
+
     @staticmethod
     def InitialConvParameters(shape, init_method):
         assert (len(shape) == 4)

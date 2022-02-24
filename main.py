@@ -228,7 +228,7 @@ if __name__ == '__main__':
     dataReader = LoadData()
     # net = model()
     # net.distributed_load_parameters()
-    net = VGG(param=params,vgg_name="VGG13")
+    net = VGG(param=params,vgg_name="VGG11")
     net.train(dataReader, checkpoint=0.05, need_test=True)
     time2 = time.time()
     print(f"total time: {time2 - time1}")
