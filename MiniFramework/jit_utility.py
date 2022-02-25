@@ -160,7 +160,7 @@ def calcalate_weights_grad(x, dz, batch_size, output_c, input_c, filter_h, filte
             for ic in range(input_c):    # == filter count
                 w_grad = np.zeros((filter_h, filter_w)).astype(np.float32)
                 #w_grad = np.zeros((filter_h, filter_w))
-                jit_conv_2d(x[bs,ic], dz[bs,oc], 0, w_grad)
+                jit_conv_2d(x[bs, ic], dz[bs, oc], 0, w_grad)
                 dW[oc,ic] += w_grad
             #end ic
             dB[oc] += dz[bs,oc].sum()
@@ -175,7 +175,7 @@ def calculate_delta_out(dz, rot_weights, batch_size, num_input_channel, num_outp
             delta_per_input = np.zeros((input_height, input_width)).astype(np.float32)
             #delta_per_input = np.zeros((input_height, input_width))
             for ic in range(num_input_channel): # == filter count
-                jit_conv_2d(dz[bs,oc], rot_weights[oc,ic], 0, delta_per_input)
+                jit_conv_2d(dz[bs, oc], rot_weights[oc, ic], 0, delta_per_input)
                 delta_out[bs,ic] += delta_per_input
             #END IC
         #end oc

@@ -5,7 +5,7 @@ import struct
 
 
 class MnistDataReader(DataReader):
-    def __init__(self, train_x, train_y, test_x, test_y, mode="imgae"):
+    def __init__(self, train_x, train_y, test_x, test_y, mode="image"):
         self.train_image_file = train_x
         self.train_label_file = train_y
         self.test_image_file = test_x

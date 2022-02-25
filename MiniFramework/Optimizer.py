@@ -85,11 +85,11 @@ class AdaDelta(Optimizer):
 
     def update(self, theta, grad):
         grad2 = np.multiply(grad, grad)
-        self.s = self.alpha * self.s + (1-self.alpha)*grad2
-        d_theta = np.sqrt((self.eps + self.r)/(self.eps + self.s)) * grad
+        self.s = self.alpha * self.s + (1 - self.alpha) * grad2
+        d_theta = np.sqrt((self.eps + self.r) / (self.eps + self.s)) * grad
         theta = theta - d_theta
         d_theta2 = np.multiply(d_theta, d_theta)
-        self.r = self.alpha * self.r + (1-self.alpha) * d_theta2
+        self.r = self.alpha * self.r + (1 - self.alpha) * d_theta2
         return theta
 
 
@@ -99,15 +99,16 @@ class Adam(Optimizer):
         self.lr = lr
         self.p1 = 0.9
         self.p2 = 0.999
-        self.eps = 1e-8
+        self.eps = 1e-3
         self.t = 0
-        self.m = np.empty((1,1))
-        self.v = np.empty((1,1))
+        self.m = 0
+        self.v = 0
 
     def update(self, theta, grad):
         self.t = self.t + 1
-        self.m = self.p1 * self.m + (1-self.p1) * grad
-        self.v = self.p2 * self.v + (1-self.p2) * np.multiply(grad, grad)
+        self.m = self.p1 * self.m + (1 - self.p1) * grad
+        i = np.multiply(grad, grad)
+        self.v = self.p2 * self.v + (1 - self.p2) * i
         m_hat = self.m / (1 - self.p1 ** self.t)
         v_hat = self.v / (1 - self.p2 ** self.t)
         d_theta = self.lr * m_hat / (self.eps + np.sqrt(v_hat))
@@ -118,7 +119,7 @@ class Adam(Optimizer):
 class OptimizerSelector(object):
     @staticmethod
     def CreateOptimizer(lr, name=OptimizerName.SGD):
-        optimizer=None
+        optimizer = None
         if name == OptimizerName.SGD:
             optimizer = SGD(lr)
         elif name == OptimizerName.Adam:

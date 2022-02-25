@@ -25,7 +25,7 @@ class NeuralNet(object):
         self.layer_list.append(layer)
         self.layer_count += 1
 
-    def add_layers(self,layers:list, name):
+    def add_layers(self, layers: list, name):
         for layer in layers:
             # layer.initialize(self.subfolder, name)
             self.layer_list.append(layer)
@@ -78,10 +78,7 @@ class NeuralNet(object):
         for epoch in range(self.hp.max_epoch):
             dataReader.Shuffle()
 
-
             for iteration in range(max_iteration):
-                if iteration == 18:
-                    print("stop")
                 # get x and y value for one sample
                 batch_x, batch_y = dataReader.GetBatchTrainSamples(self.hp.batch_size, iteration)
                 # for optimizers which need pre-update weights
@@ -98,8 +95,8 @@ class NeuralNet(object):
                 # final update w,b
                 self.__update()
                 time4 = time.time()
-                print(f"iteration {iteration} , forward time: {time2-time1}, "
-                      f"backward time: {time3 - time2}, update time: {time4-time3},total time: {time4 - time1}")
+                print(f"iteration {iteration} , forward time: {time2 - time1}, "
+                      f"backward time: {time3 - time2}, update time: {time4 - time3},total time: {time4 - time1}")
 
                 total_iteration = epoch * max_iteration + iteration
                 if (total_iteration + 1) % checkpoint_iteration == 0:
@@ -216,12 +213,11 @@ class NeuralNet(object):
             layer = self.layer_list[i]
             layer.distributed_add_parameters(param[name])
 
-    def distributed_average_parameters(self,num):
+    def distributed_average_parameters(self, num):
         print("average parameters")
         for i in range(self.layer_count):
             layer = self.layer_list[i]
             layer.distributed_average_parameters(num)
-
 
     def ShowLossHistory(self, xcoor, xmin=None, xmax=None, ymin=None, ymax=None):
         title = str.format("{0},accuracy={1:.4f}", self.hp.toString(), self.accuracy)

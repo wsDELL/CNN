@@ -3,10 +3,9 @@ from MiniFramework.util import *
 
 
 class DropoutLayer(layer):
-    def __init__(self, input_size, ratio=0.5):
+    def __init__(self, ratio=0.5):
         self.dropout_ratio = ratio
-        self.input_size = input_size
-        self.output_size = input_size
+
         self.mask = None
         self.output_v = None
         self.name = None
@@ -15,7 +14,9 @@ class DropoutLayer(layer):
         self.name = None
 
     def forward(self, input_v: np.ndarray, train=True):
-        assert (input_v.ndim == 2)
+        assert (input_v.ndim == 2 or input_v.ndim == 4)
+        self.input_size = input_v
+        self.output_size = input_v
         if train:
             self.mask = np.random.rand(*input_v.shape) > self.dropout_ratio
             self.output_v = input_v * self.mask

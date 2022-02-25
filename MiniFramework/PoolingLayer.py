@@ -27,9 +27,11 @@ class PoolingLayer(layer):
 
     def forward(self, input_v, train=True):
         return self.forward_img2col(input_v, train)
+        # return self.forward_numba(input_v, train)
 
     def backward(self, delta_in, layer_idx):
-        return self.backward_col2img(delta_in,layer_idx)
+        return self.backward_col2img(delta_in, layer_idx)
+        # return self.backward_numba(delta_in, layer_idx)
 
     def forward_img2col(self, input_v, train=True):
         self.input_v = input_v
@@ -64,6 +66,30 @@ class PoolingLayer(layer):
                      self.output_width)
         return dx
 
+    def forward_numba(self, input_v, train=True):
+        assert (input_v.ndim == 4)
+        self.input_v = input_v
+        N, C, H, W = input_v.shape
+        self.num_input_channel = C
+        self.input_height = H
+        self.input_width = W
+        self.output_width = (self.input_width - self.pool_width) // self.stride + 1
+        self.output_height = (self.input_height - self.pool_height) // self.stride + 1
+        self.output_shape = (self.num_input_channel, self.output_height, self.output_width)
+        self.output_size = self.num_input_channel * self.output_height * self.output_width
+        self.batch_size = self.input_v.shape[0]
+        self.z = jit_maxpool_forward(self.input_v, self.batch_size, self.num_input_channel, self.output_height,
+                                     self.output_width, self.pool_height, self.pool_width, self.stride)
+        return self.z
+
+    def backward_numba(self, delta_in, layer_idx):
+        assert (delta_in.ndim == 4)
+        assert (delta_in.shape == self.z.shape)
+        delta_out = jit_maxpool_backward(self.input_v, delta_in, self.batch_size, self.num_input_channel,
+                                         self.output_height,
+                                         self.output_width, self.pool_height, self.pool_width, self.stride)
+        return delta_out
+
     def save_parameters(self):
         np.savez(self.init_file_name, self.pooling_type)
 
@@ -72,13 +98,13 @@ class PoolingLayer(layer):
         pass
 
     def distributed_save_parameters(self):
-        dis = {self.name:{'pooling_type': self.pooling_type}}
+        dis = {self.name: {'pooling_type': self.pooling_type}}
         return dis
 
     def distributed_load_parameters(self, param: dict):
         self.pooling_type = param[self.name]['pooling_type']
 
-    def distributed_add_parameters(self,param: dict):
+    def distributed_add_parameters(self, param: dict):
         pass
 
     def distributed_average_parameters(self, num):

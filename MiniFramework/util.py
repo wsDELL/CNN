@@ -37,6 +37,7 @@ def col2img(col, input_shape, filter_h, filter_w, stride, pad, out_h, out_w):
     return img[:, :, pad:H + pad, pad:W + pad]
 
 
+@jit(nopython=True)
 def calculate_output_size(input_h, input_w, filter_h, filter_w, padding, stride=1):
     output_h = (input_h - filter_h + 2 * padding) // stride + 1
     output_w = (input_w - filter_w + 2 * padding) // stride + 1
@@ -44,6 +45,7 @@ def calculate_output_size(input_h, input_w, filter_h, filter_w, padding, stride=
     return result
 
 
+@jit(nopython=True)
 def jit_cov2d(input_v: np.ndarray, weights: np.ndarray, bias, out_w, out_h, stride=1):
     assert (input_v.ndim == 4)
     assert (input_v.shape[1] == weights.shape[1])
@@ -69,15 +71,16 @@ def jit_cov2d(input_v: np.ndarray, weights: np.ndarray, bias, out_w, out_h, stri
     return rs
 
 
-def jit_conv_2d(input_array, kernal, bias, output_array):
+@jit(nopython=True)
+def jit_conv_2d(input_array, kernel, bias, output_array):
     assert (input_array.ndim == 2)
     assert (output_array.ndim == 2)
-    assert (kernal.ndim == 2)
+    assert (kernel.ndim == 2)
 
     output_height = output_array.shape[0]
     output_width = output_array.shape[1]
-    kernal_height = kernal.shape[0]
-    kernal_width = kernal.shape[1]
+    kernal_height = kernel.shape[0]
+    kernal_width = kernel.shape[1]
 
     for i in range(output_height):
         i_start = i
@@ -86,9 +89,10 @@ def jit_conv_2d(input_array, kernal, bias, output_array):
             j_start = j
             j_end = j_start + kernal_width
             target_array = input_array[i_start:i_end, j_start:j_end]
-            output_array[i, j] = np.sum(target_array * kernal) + bias
+            output_array[i, j] = np.sum(target_array * kernel) + bias
 
 
+@jit(nopython=True)
 def expand_delta_map(delta_in, batch_size, input_c, input_h, input_w, output_h, output_w, filter_h, filter_w, padding,
                      stride):
     assert (delta_in.ndim == 4)
@@ -112,12 +116,14 @@ def expand_delta_map(delta_in, batch_size, input_c, input_h, input_w, output_h, 
     return dZ_stride_1
 
 
+@jit(nopython=True)
 def calculate_padding_size(input_h, input_w, filter_h, filter_w, output_h, output_w, stride=1):
     pad_h = ((output_h - 1) * stride - input_h + filter_h) // 2
     pad_w = ((output_w - 1) * stride - input_w + filter_w) // 2
     return (pad_h, pad_w)
 
 
+@jit(nopython=True)
 def calcalate_weights_grad(x, dz, batch_size, output_c, input_c, filter_h, filter_w, dW, dB):
     for bs in range(batch_size):
         for oc in range(output_c):  # == kernal count
@@ -133,17 +139,88 @@ def calcalate_weights_grad(x, dz, batch_size, output_c, input_c, filter_h, filte
     return (dW, dB)
 
 
+@jit(nopython=True)
 def calculate_delta_out(dz, rot_weights, batch_size, num_input_channel, num_output_channel, input_height, input_width,
                         delta_out):
     for bs in range(batch_size):
-        for oc in range(num_output_channel):    # == kernal count
+        for oc in range(num_output_channel):  # == kernal count
             delta_per_input = np.zeros((input_height, input_width)).astype(np.float32)
-            #delta_per_input = np.zeros((input_height, input_width))
-            for ic in range(num_input_channel): # == filter count
-                jit_conv_2d(dz[bs,oc], rot_weights[oc,ic], 0, delta_per_input)
-                delta_out[bs,ic] += delta_per_input
-            #END IC
-        #end oc
-    #end bs
+            # delta_per_input = np.zeros((input_height, input_width))
+            for ic in range(num_input_channel):  # == filter count
+                jit_conv_2d(dz[bs, oc], rot_weights[oc, ic], 0, delta_per_input)
+                delta_out[bs, ic] += delta_per_input
+            # END IC
+        # end oc
+    # end bs
     return delta_out
 
+
+@jit(nopython=True)
+def jit_maxpool_forward(x, batch_size, input_c, output_h, output_w, pool_h, pool_w, pool_stride):
+    z = np.zeros((batch_size, input_c, output_h, output_w))
+    for b in range(batch_size):
+        for c in range(input_c):
+            for i in range(output_h):
+                i_start = i * pool_stride
+                i_end = i_start + pool_h
+                for j in range(output_w):
+                    j_start = j * pool_stride
+                    j_end = j_start + pool_w
+                    target_array = x[b, c, i_start:i_end, j_start:j_end]
+                    t = np.max(target_array)
+                    z[b, c, i, j] = t
+
+    return z
+
+
+@jit(nopython=True)
+def jit_maxpool_backward(x, delta_in, batch_size, input_c, output_h, output_w, pool_h, pool_w, pool_stride):
+    delta_out = np.zeros(x.shape)
+    for b in range(batch_size):
+        for c in range(input_c):
+            for i in range(output_h):
+                i_start = i * pool_stride
+                i_end = i_start + pool_h
+                for j in range(output_w):
+                    j_start = j * pool_stride
+                    j_end = j_start + pool_w
+                    m, n = jit_get_max_index(x[b, c], i_start, i_end, j_start, j_end)
+                    delta_out[b, c, m, n] = delta_in[b, c, i, j]
+
+    return delta_out
+
+
+@jit(nopython=True)
+def jit_get_max_index(input, i_start, i_end, j_start, j_end):
+    assert (input.ndim == 2)
+    max_i = i_start
+    max_j = j_start
+    max_value = input[i_start, j_start]
+    for i in range(i_start, i_end):
+        for j in range(j_start, j_end):
+            if input[i, j] > max_value:
+                max_value = input[i, j]
+                max_i, max_j = i, j
+
+    return max_i, max_j
+
+
+@jit(nopython=True)
+def jit_conv_2d(input_array, kernal, bias, output_array):
+    assert (input_array.ndim == 2)
+    assert (output_array.ndim == 2)
+    assert (kernal.ndim == 2)
+
+    output_height = output_array.shape[0]
+    output_width = output_array.shape[1]
+    kernal_height = kernal.shape[0]
+    kernal_width = kernal.shape[1]
+
+    for i in range(output_height):
+        i_start = i
+        i_end = i_start + kernal_height
+        for j in range(output_width):
+            j_start = j
+            j_end = j_start + kernal_width
+            target_array = input_array[i_start:i_end, j_start:j_end]
+            output_array[i, j] = np.sum(target_array * kernal) + bias

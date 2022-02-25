@@ -13,8 +13,14 @@ class VGG(NeuralNet):
     def __init__(self, param, vgg_name):
         super().__init__(param, vgg_name)
         self._make_layers(cfg[vgg_name])
-        self.add_layer(FCLayer(512, 10, param), name="fc1")
-        self.add_layer(ClassificationLayer(Softmax()),name="softmax")
+        self.add_layer(DropoutLayer(), name="Drop1")
+        # self.add_layer(FCLayer(512, 512, param), name="fc1")
+        # self.add_layer(ReLU(), name="Relu_1")
+        # self.add_layer(DropoutLayer(), name="Drop2")
+        # self.add_layer(FCLayer(512, 512, param), name="fc2")
+        # self.add_layer(ReLU(), name="Relu_2")
+        self.add_layer(FCLayer(512, 10, param), name="fc3")
+        self.add_layer(Softmax(), name="softmax")
 
     def _make_layers(self, cfg: list):
         in_channels = 3
@@ -26,8 +32,8 @@ class VGG(NeuralNet):
                 M_count = M_count + 1
             else:
                 self.add_layer(ConLayer(in_channels, x, kernel_size=3, hp=self.hp, padding=1), name=f"con{con_count}")
-                # self.add_layer(BatchNormalLayer(x), name=f"bn{con_count}")
-                self.add_layer(ActivationLayer(ReLU()), name=f"relu{con_count}")
+                self.add_layer(BatchNormalLayer(x), name=f"bn{con_count}")
+                self.add_layer(ReLU(), name=f"relu{con_count}")
                 con_count = con_count + 1
                 in_channels = x
         # self.add_layer(PoolingLayer(kernel_size=1, stride=1, pooling_type=PoolingType.MEAN), name=f"AvgPool")

@@ -118,14 +118,14 @@ def model1():
     net.add_layer(c1, "c1")
     p1 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p1, "p1")
-    r1 = ActivationLayer(ReLU())
+    r1 = ReLU()
     net.add_layer(r1, "relu1")
 
     c2 = ConLayer(32, 64, kernel_size=3, hp=params, stride=1)
     net.add_layer(c2, "c2")
     p2 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p2, "p2")
-    r2 = ActivationLayer(ReLU())
+    r2 = ReLU()
     net.add_layer(r2, "relu2")
 
     c3 = ConLayer(64, 128, kernel_size=3, hp=params, stride=1)
@@ -142,7 +142,7 @@ def model1():
     net.add_layer(c5, "c3")
     p5 = PoolingLayer(kernel_size=3, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p5, "p2")
-    r5 = ActivationLayer(ReLU())
+    r5 = ReLU()
     net.add_layer(r5, "relu5")
 
     # d1 = DropoutLayer(p5.output_shape)
@@ -151,7 +151,7 @@ def model1():
     net.add_layer(f1, "f1")
     bn1 = BatchNormalLayer(f1.output_num)
     net.add_layer(bn1, 'bn1')
-    r6 = ActivationLayer(ReLU())
+    r6 = ReLU()
     net.add_layer(r6, "relu6")
 
     # d1 = DropoutLayer(f1.output_num)
@@ -161,12 +161,12 @@ def model1():
     net.add_layer(f2, "f2")
     bn2 = BatchNormalLayer(f2.output_num)
     net.add_layer(bn2, 'bn1')
-    r6 = ActivationLayer(ReLU())
+    r6 = ReLU()
     net.add_layer(r6, "relu6")
 
     f3 = FCLayer(f2.output_num, 10, params)
     net.add_layer(f3, "f3")
-    s4 = ClassificationLayer(Softmax())
+    s4 = Softmax()
     net.add_layer(s4, "s4")
 
     return net
@@ -187,14 +187,14 @@ def model():
 
     c1 = ConLayer(1, 8, kernel_size=3, hp=params, stride=1)
     net.add_layer(c1, "c1")
-    r1 = ActivationLayer(ReLU())
+    r1 = ReLU()
     net.add_layer(r1, "relu1")
     p1 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p1, "p1")
 
     c2 = ConLayer(8, 16, kernel_size=3, hp=params, stride=1)
     net.add_layer(c2, "c2")
-    r2 = ActivationLayer(ReLU())
+    r2 = ReLU()
     net.add_layer(r2, "relu2")
     p2 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p2, "p2")
@@ -203,12 +203,12 @@ def model():
     net.add_layer(f3, "f3")
     bn3 = BatchNormalLayer(32)
     net.add_layer(bn3, "bn3")
-    r3 = ActivationLayer(ReLU())
+    r3 = ReLU()
     net.add_layer(r3, "relu3")
 
     f4 = FCLayer(32, 10, params)
     net.add_layer(f4, "f2")
-    s4 = ClassificationLayer(Softmax())
+    s4 = Softmax()
     net.add_layer(s4, "s4")
 
     return net
@@ -219,17 +219,19 @@ if __name__ == '__main__':
     num_output = 10
     max_epoch = 5
     batch_size = 128
-    learning_rate = 0.1
+    learning_rate = 0.001
     params = HyperParameters(
         learning_rate, max_epoch, batch_size,
         net_type=NetType.MultipleClassifier,
         init_method=InitialMethod.Xavier,
-        optimizer_name=OptimizerName.Momentum)
+        optimizer_name=OptimizerName.Adam)
     dataReader = LoadData()
-    # net = model()
+    # net = model1()
     # net.distributed_load_parameters()
     net = VGG(param=params,vgg_name="VGG11")
+    print("start")
     net.train(dataReader, checkpoint=0.05, need_test=True)
+    print("end")
     time2 = time.time()
     print(f"total time: {time2 - time1}")
     # checkpoint = 0.05

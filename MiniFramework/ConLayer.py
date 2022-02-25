@@ -32,9 +32,11 @@ class ConLayer(layer):
     def forward(self, input_v, train=True):
         self.input_v = input_v
         return self._forward_img2col(input_v)
+        # return self._forward_numba(input_v, train)
 
     def backward(self, delta_in, layer_idx):
         delta_out, dw, db = self._backward_col2img(delta_in, layer_idx)
+        # delta_out, dw, db = self._backward_numba(delta_in, layer_idx)
         return delta_out
 
     def _forward_img2col(self, input_v: np.ndarray):
@@ -66,9 +68,11 @@ class ConLayer(layer):
         delta_out = col2img(col_delta_out, self.input_v.shape, self.filter_height, self.filter_width, self.stride,
                             self.padding, self.output_shape[1],
                             self.output_shape[2])
+        self.WB.dW = self.WB.dW.astype('float32')
+        self.WB.dB = self.WB.dB.astype('float32')
         return delta_out, self.WB.dW, self.WB.dB
 
-    def _forward_numba(self, input_v: np.ndarray):
+    def _forward_numba(self, input_v: np.ndarray, train=True):
         assert (input_v.ndim == 4)
         self.input_v = input_v
         self.batch_size = self.input_v.shape[0]
@@ -84,7 +88,7 @@ class ConLayer(layer):
         else:
             img = self.input_v
 
-        self.output_v = jit_cov2d(input_v, self.WB.W, self.WB.B, _output_shape[0], _output_shape[1])
+        self.output_v = jit_cov2d(img, self.WB.W, self.WB.B, _output_shape[0], _output_shape[1])
         return self.output_v
 
     def _backward_numba(self, delta_in: np.ndarray, flag):
@@ -101,6 +105,7 @@ class ConLayer(layer):
             self.input_height, self.input_width)
         dz_padded = np.pad(dz_stride_1, ((0, 0), (0, 0), (pad_h, pad_h), (pad_w, pad_w)), 'constant')
         delta_out = self._calculate_delta_out(dz_padded, flag)
+        return delta_out, self.WB.dW, self.WB.dB
 
     def _calculate_weightsbias_grad(self, dz):
         self.WB.ClearGrads()
@@ -122,11 +127,11 @@ class ConLayer(layer):
             # 旋转卷积核180度
         rot_weights = self.WB.Rotate180()
         # 定义输出矩阵形状
-        delta_out = np.zeros(self.x.shape).astype(np.float32)
+        delta_out = np.zeros(self.input_v.shape).astype(np.float32)
         # 输入梯度矩阵卷积旋转后的卷积核，得到输出梯度矩阵
         delta_out = calculate_delta_out(dz, rot_weights, self.batch_size,
-                                        self.InC, self.OutC,
-                                        self.InH, self.InW, delta_out)
+                                        self.input_channel, self.output_channel,
+                                        self.input_height, self.input_width, delta_out)
 
         return delta_out
 
