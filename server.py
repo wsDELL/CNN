@@ -5,14 +5,54 @@ from multiprocessing.managers import BaseManager
 from multiprocessing import Queue
 import numpy as np
 from MiniFramework import *
+from Model.vgg import *
 
 train_x = "./data/MNIST/raw/train-images-idx3-ubyte"
 train_y = "./data/MNIST/raw/train-labels-idx1-ubyte"
 test_x = "./data/MNIST/raw/t10k-images-idx3-ubyte"
 test_y = "./data/MNIST/raw/t10k-labels-idx1-ubyte"
 
+cifar_name = ["data_batch_1","data_batch_2","data_batch_3","data_batch_4","data_batch_5"]
+
+def unpickle(file):
+    import pickle
+    with open(file, 'rb') as fo:
+        dict = pickle.load(fo, encoding='bytes')
+    return dict
+
+
+def load_CIFAR_batch(filename):
+    # """ load single batch of cifar """
+    # # with open(filename, 'rb') as f:
+        datadict = unpickle(filename)  # dict类型
+        X = datadict[b'data']  # X, ndarray, 像素值
+        Y = datadict[b'labels']  # Y, list, 标签, 分类
+
+        X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
+        Y = np.array(Y)
+        return X, Y
 
 def LoadData():
+    for i in range(len(cifar_name)):
+        if i == 0:
+            train_x,train_y=load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
+        else:
+            train_X,train_Y=load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
+            train_x = np.concatenate((train_x,train_X))
+            train_y = np.concatenate((train_y,train_Y))
+    test_x,test_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/test_batch")
+
+    mdr = CIFAR10DataReader(train_x, train_y, test_x, test_y)
+    # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
+    mdr.ReadData()
+    mdr.NormalizeX()
+    mdr.NormalizeY(NetType.MultipleClassifier, base=0)
+    mdr.Shuffle()
+    mdr.GenerateValidationSet(k=12)
+    return mdr
+
+
+def LoadData1():
     mdr = MnistDataReader(train_x, train_y, test_x, test_y, "image")
     mdr.ReadData()
     mdr.NormalizeX()
@@ -35,31 +75,58 @@ def model():
 
     net = NeuralNet(params, "mnist_cnn")
 
-    c1 = ConLayer((1, 28, 28), (8, 3, 3), params, stride=1, pad=0)
+    c1 = ConLayer(1, 8, kernel_size=3, hp=params, stride=1)
     net.add_layer(c1, "c1")
-    r1 = ActivationLayer(ReLU())
+    r1 = ReLU()
     net.add_layer(r1, "relu1")
-    p1 = PoolingLayer(c1.output_shape, (2, 2), 2, PoolingTypes.MAX)
+    p1 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p1, "p1")
 
-    c2 = ConLayer(p1.output_shape, (16, 3, 3), params, stride=1, pad=0)
+    c2 = ConLayer(8, 16, kernel_size=3, hp=params, stride=1)
     net.add_layer(c2, "c2")
-    r2 = ActivationLayer(ReLU())
+    r2 = ReLU()
     net.add_layer(r2, "relu2")
-    p2 = PoolingLayer(c2.output_shape, (2, 2), 2, PoolingTypes.MAX)
+    p2 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p2, "p2")
 
-    f3 = FCLayer(p2.output_size, 32, params)
+    f3 = FCLayer(400, 32, params)
     net.add_layer(f3, "f3")
-    bn3 = BatchNormalLayer(f3.output_num)
+    bn3 = BatchNormalLayer(32)
     net.add_layer(bn3, "bn3")
-    r3 = ActivationLayer(ReLU())
+    r3 = ReLU()
     net.add_layer(r3, "relu3")
 
-    f4 = FCLayer(f3.output_num, 10, params)
+    f4 = FCLayer(32, 10, params)
     net.add_layer(f4, "f2")
-    s4 = ClassificationLayer(Softmax())
+    s4 = Softmax()
     net.add_layer(s4, "s4")
+
+
+    # c1 = ConLayer((1, 28, 28), (8, 3, 3), params, stride=1, padding=0)
+    # net.add_layer(c1, "c1")
+    # r1 = ActivationLayer(ReLU())
+    # net.add_layer(r1, "relu1")
+    # p1 = PoolingLayer(c1.output_shape, (2, 2), 2, PoolingTypes.MAX)
+    # net.add_layer(p1, "p1")
+    #
+    # c2 = ConLayer(p1.output_shape, (16, 3, 3), params, stride=1, pad=0)
+    # net.add_layer(c2, "c2")
+    # r2 = ActivationLayer(ReLU())
+    # net.add_layer(r2, "relu2")
+    # p2 = PoolingLayer(c2.output_shape, (2, 2), 2, PoolingTypes.MAX)
+    # net.add_layer(p2, "p2")
+    #
+    # f3 = FCLayer(p2.output_size, 32, params)
+    # net.add_layer(f3, "f3")
+    # bn3 = BatchNormalLayer(f3.output_num)
+    # net.add_layer(bn3, "bn3")
+    # r3 = ActivationLayer(ReLU())
+    # net.add_layer(r3, "relu3")
+    #
+    # f4 = FCLayer(f3.output_num, 10, params)
+    # net.add_layer(f4, "f2")
+    # s4 = ClassificationLayer(Softmax())
+    # net.add_layer(s4, "s4")
 
     return net
 
@@ -159,9 +226,19 @@ class QueueManager(BaseManager):
 
 if __name__ == '__main__':
     time1 = time.time()
+    num_output = 10
+    max_epoch = 5
+    batch_size = 128
+    learning_rate = 0.01
+    params = HyperParameters(
+        learning_rate, max_epoch, batch_size,
+        net_type=NetType.MultipleClassifier,
+        init_method=InitialMethod.Xavier,
+        optimizer_name=OptimizerName.Adam)
     lock = multiprocessing.Lock()
     dataReader = LoadData()
-    net = model()
+    # net = model()
+    net = VGG(param=params,vgg_name="VGG11")
     param = net.distributed_save_parameters()
     # net.train(dataReader, checkpoint=0.05, need_test=True)
     net.loss_func = LossFunction(net.hp.net_type)
@@ -179,7 +256,7 @@ if __name__ == '__main__':
     QueueManager.register('get_task_queue', callable=return_task_queue)
     QueueManager.register('get_result_queue', callable=return_result_queue)
 
-    manager = QueueManager(address=('192.168.1.168', 5006), authkey=b'abc')
+    manager = QueueManager(address=('131.181.249.163', 5006), authkey=b'abc')
     manager.start()
     # s = manager.get_server()
     # s.serve_forever()
@@ -193,12 +270,15 @@ if __name__ == '__main__':
         iteration_count = 0
         for iteration in range(max_iteration):
             print('put task %d' % iteration)
+            if iteration == 2:
+                print("stop")
             task.put({iteration: param})
             iteration_count = iteration_count + 1
-            ret = result.get()
-            result1.append(ret)
+
             if iteration_count % 5 == 0:
                 lock.acquire()
+                ret = result.get()
+                result1.append(ret)
                 net.distributed_load_parameters(result1[0])
                 net.distributed_add_parameters(result1[1])
                 net.distributed_add_parameters(result1[2])
@@ -213,10 +293,10 @@ if __name__ == '__main__':
             batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration)
             total_iteration = epoch * max_iteration + iteration
 
-            if (total_iteration + 1) % checkpoint_iteration == 0:
-                need_stop = net.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
-                if need_stop:
-                    break
+            # if (total_iteration + 1) % checkpoint_iteration == 0:
+            #     need_stop = net.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
+            #     if need_stop:
+            #         break
             # name = list(ret.keys())[0]
             # print(name)
     print("testing...")

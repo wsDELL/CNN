@@ -4,7 +4,7 @@ from multiprocessing.managers import BaseManager
 from multiprocessing import Queue, Array
 
 from MiniFramework import *
-
+from Model.vgg import *
 
 train_x = "./data/MNIST/raw/train-images-idx3-ubyte"
 train_y = "./data/MNIST/raw/train-labels-idx1-ubyte"
