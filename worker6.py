@@ -219,7 +219,7 @@ if __name__ == '__main__':
         init_method=InitialMethod.Xavier,
         optimizer_name=OptimizerName.Adam)
     net = VGG(param=params,vgg_name="VGG11")
-    server_address = '131.181.249.163'
+    server_address = '192.168.0.225'
     print('connect to server %s...' % server_address)
 
     manager = QueueManager(address=(server_address, 5006), authkey=b'abc')
