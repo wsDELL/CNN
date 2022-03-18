@@ -6,6 +6,7 @@ from MiniFramework.LossFunction import *
 from MiniFramework.TrainingHistory import *
 import os
 import time
+import csv
 
 
 class NeuralNet(object):
@@ -101,12 +102,12 @@ class NeuralNet(object):
                 total_iteration = epoch * max_iteration + iteration
                 if (total_iteration + 1) % checkpoint_iteration == 0:
                     self.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
-                    # if need_stop:
-                    #     break
+                    if need_stop:
+                        break
 
             self.save_parameters()
-            # if need_stop:
-            #     break
+            if need_stop:
+                break
             # end if
         # end for
 
@@ -138,19 +139,19 @@ class NeuralNet(object):
         print("loss_train=%.6f, accuracy_train=%f" % (loss_train, accuracy_train))
 
         # calculate validation loss
-        # vld_x, vld_y = dataReader.GetValidationSet()
-        # self.__forward(vld_x, train=False)
-        # loss_vld, accuracy_vld = self.loss_func.CheckLoss(self.output_v, vld_y)
-        # loss_vld = loss_vld + regular_cost / vld_x.shape[0]
-        # print("loss_valid=%.6f, accuracy_valid=%f" % (loss_vld, accuracy_vld))
-        #
-        # # end if
-        # need_stop = self.loss_trace.Add(epoch, total_iteration, loss_train, accuracy_train, loss_vld, accuracy_vld,
-        #                                 self.hp.stopper)
-        # if self.hp.stopper is not None:
-        #     if self.hp.stopper.stop_condition == StopCondition.StopLoss and loss_vld <= self.hp.stopper.stop_value:
-        #         need_stop = True
-        # return need_stop
+        vld_x, vld_y = dataReader.GetValidationSet()
+        self.__forward(vld_x, train=False)
+        loss_vld, accuracy_vld = self.loss_func.CheckLoss(self.output_v, vld_y)
+        loss_vld = loss_vld + regular_cost / vld_x.shape[0]
+        print("loss_valid=%.6f, accuracy_valid=%f" % (loss_vld, accuracy_vld))
+
+        # end if
+        need_stop = self.loss_trace.Add(epoch, total_iteration, loss_train, accuracy_train, loss_vld, accuracy_vld,
+                                        self.hp.stopper)
+        if self.hp.stopper is not None:
+            if self.hp.stopper.stop_condition == StopCondition.StopLoss and loss_vld <= self.hp.stopper.stop_value:
+                need_stop = True
+        return need_stop
 
     def __get_regular_cost_from_fc_layer(self, regularName):
         if regularName != RegularMethod.L1 and regularName != RegularMethod.L2:
@@ -222,6 +223,20 @@ class NeuralNet(object):
     def ShowLossHistory(self, xcoor, xmin=None, xmax=None, ymin=None, ymax=None):
         title = str.format("{0},accuracy={1:.4f}", self.hp.toString(), self.accuracy)
         self.loss_trace.ShowLossHistory(title, xcoor, xmin, xmax, ymin, ymax)
+
+    def SaveLossHistory(self):
+        # path = self.subfolder
+        name_attribute = ['epoch', 'iteration', 'training_loss', 'training_accuracy', 'validating_loss',
+                          'validating_accuracy']
+        csvFile = open('history_data.csv',"w+", newline='')
+        try:
+            writer = csv.writer(csvFile)
+            writer.writerow(name_attribute)
+            for i in range(len(self.loss_trace.iteration_seq)):
+                writer.writerow([self.loss_trace.epoch_seq[i],self.loss_trace.iteration_seq[i],self.loss_trace.training_loss[i],
+                                 self.loss_trace.training_accuracy[i],self.loss_trace.val_loss[i],self.loss_trace.val_accuracy[i]])
+        finally:
+            csvFile.close()
 
     def __create_subfolder(self):
         if self.model_name != None:

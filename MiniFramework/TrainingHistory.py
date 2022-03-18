@@ -26,8 +26,12 @@ class TrainingHistory(object):
         self.training_accuracy.append(training_accuracy)
         if val_loss is not None:
             self.val_loss.append(val_loss)
+        else:
+            self.val_loss.append(None)
         if val_accuracy is not None:
             self.val_accuracy.append(val_accuracy)
+        else:
+            self.val_accuracy.append(None)
 
         if stopper is not None:
             if stopper.stop_condition == StopCondition.StopDiff:

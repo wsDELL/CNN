@@ -74,9 +74,9 @@ def unpickle(file):
 def load_CIFAR_batch(filename):
     # """ load single batch of cifar """
     # # with open(filename, 'rb') as f:
-        datadict = unpickle(filename)  # dict类型
-        X = datadict[b'data']  # X, ndarray, 像素值
-        Y = datadict[b'labels']  # Y, list, 标签, 分类
+        datadict = unpickle(filename)  
+        X = datadict[b'data']
+        Y = datadict[b'labels']
 
         X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
         Y = np.array(Y)
@@ -226,6 +226,7 @@ if __name__ == '__main__':
         init_method=InitialMethod.Xavier,
         optimizer_name=OptimizerName.Adam)
     dataReader = LoadData()
+    # net=model()
     # net = model1()
     # net.distributed_load_parameters()
     net = VGG(param=params,vgg_name="VGG11")
@@ -234,48 +235,5 @@ if __name__ == '__main__':
     print("end")
     time2 = time.time()
     print(f"total time: {time2 - time1}")
-    # checkpoint = 0.05
-    # max_iteration = math.ceil(dataReader.num_train / net.hp.batch_size)
-    # checkpoint_iteration = int(math.ceil(max_iteration * checkpoint))
-    # need_stop = False
-    # for epoch in range(net.hp.max_epoch):
-    #     dataReader.Shuffle()
-    #
-    #     for iteration in range(max_iteration):
-    #         # get x and y value for one sample
-    #         batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration)
-    #         # for optimizers which need pre-update weights
-    #         # if self.hp.optimizer_name == OptimizerName.Nag:
-    #         #     self.__pre_update()
-    #         # get z from x,y
-    #
-    #         time1 = time.time()
-    #         self.__forward(batch_x, train=True)
-    #         time2 = time.time()
-    #         # calculate gradient of w and b
-    #         self.__backward(batch_x, batch_y)
-    #         time3 = time.time()
-    #         # final update w,b
-    #         self.__update()
-    #         time4 = time.time()
-    #         print(f"iteration {iteration} , forward time: {time2 - time1}, "
-    #               f"backward time: {time3 - time2}, update time: {time4 - time3},total time: {time4 - time1}")
-    #
-    #         total_iteration = epoch * max_iteration + iteration
-    #         if (total_iteration + 1) % checkpoint_iteration == 0:
-    #             need_stop = self.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
-    #             if need_stop:
-    #                 break
-    #
-    #     self.save_parameters()
-    #     if need_stop:
-    #         break
-    #     # end if
-    # # end for
-    #
-    # t1 = time.time()
-    # print("time used:", t1 - t0)
-    #
-    #
-    # accuracy = net.Test(dataReader)
-    net.ShowLossHistory(XCoordinate.Iteration)
+    # net.ShowLossHistory(XCoordinate.Iteration)
+    net.SaveLossHistory()

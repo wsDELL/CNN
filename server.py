@@ -12,8 +12,7 @@ train_y = "./data/MNIST/raw/train-labels-idx1-ubyte"
 test_x = "./data/MNIST/raw/t10k-images-idx3-ubyte"
 test_y = "./data/MNIST/raw/t10k-labels-idx1-ubyte"
 
-cifar_name = ["data_batch_1", "data_batch_2", "data_batch_3", "data_batch_4", "data_batch_5"]
-
+cifar_name = ["data_batch_1","data_batch_2","data_batch_3","data_batch_4","data_batch_5"]
 
 def unpickle(file):
     import pickle
@@ -25,24 +24,23 @@ def unpickle(file):
 def load_CIFAR_batch(filename):
     # """ load single batch of cifar """
     # # with open(filename, 'rb') as f:
-    datadict = unpickle(filename)  # dict类型
-    X = datadict[b'data']  # X, ndarray, 像素值
-    Y = datadict[b'labels']  # Y, list, 标签, 分类
+        datadict = unpickle(filename)  # dict类型
+        X = datadict[b'data']  # X, ndarray, 像素值
+        Y = datadict[b'labels']  # Y, list, 标签, 分类
 
-    X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
-    Y = np.array(Y)
-    return X, Y
-
+        X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
+        Y = np.array(Y)
+        return X, Y
 
 def LoadData():
     for i in range(len(cifar_name)):
         if i == 0:
-            train_x, train_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
+            train_x,train_y=load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
         else:
-            train_X, train_Y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
-            train_x = np.concatenate((train_x, train_X))
-            train_y = np.concatenate((train_y, train_Y))
-    test_x, test_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/test_batch")
+            train_X,train_Y=load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
+            train_x = np.concatenate((train_x,train_X))
+            train_y = np.concatenate((train_y,train_Y))
+    test_x,test_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/test_batch")
 
     mdr = CIFAR10DataReader(train_x, train_y, test_x, test_y)
     # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
@@ -103,6 +101,7 @@ def model():
     s4 = Softmax()
     net.add_layer(s4, "s4")
 
+
     # c1 = ConLayer((1, 28, 28), (8, 3, 3), params, stride=1, padding=0)
     # net.add_layer(c1, "c1")
     # r1 = ActivationLayer(ReLU())
@@ -142,7 +141,7 @@ def model1():
                              init_method=InitialMethod.Xavier,
                              optimizer_name=OptimizerName.SGD)
 
-    net = NeuralNet(params, "alexnet")
+    net = NeuralNet(params,"alexnet")
 
     c1 = ConLayer((1, 28, 28), (32, 3, 3), params, stride=1, padding=1)
     net.add_layer(c1, "c1")
@@ -239,7 +238,7 @@ if __name__ == '__main__':
     lock = multiprocessing.Lock()
     dataReader = LoadData()
     # net = model()
-    net = VGG(param=params, vgg_name="VGG11")
+    net = VGG(param=params,vgg_name="VGG11")
     param = net.distributed_save_parameters()
     # net.train(dataReader, checkpoint=0.05, need_test=True)
     net.loss_func = LossFunction(net.hp.net_type)
@@ -257,7 +256,7 @@ if __name__ == '__main__':
     QueueManager.register('get_task_queue', callable=return_task_queue)
     QueueManager.register('get_result_queue', callable=return_result_queue)
 
-    manager = QueueManager(address=('192.168.0.225', 5006), authkey=b'abc')
+    manager = QueueManager(address=('131.181.249.163', 5006), authkey=b'abc')
     manager.start()
     # s = manager.get_server()
     # s.serve_forever()
@@ -269,30 +268,23 @@ if __name__ == '__main__':
         print(f"epoch {epoch} start")
         # dataReader.Shuffle()
         iteration_count = 0
-        total_iteration_count = 0
-        for iteration in range(0, max_iteration, 2):
-            while True:
-                print('put task %d' % total_iteration_count)
-                task.put({total_iteration_count: param})
-                iteration_count = iteration_count + 1
-                total_iteration_count = total_iteration_count + 1
-                if iteration_count % 2 == 0:
-                    break
+        for iteration in range(max_iteration):
+            print('put task %d' % iteration)
+            if iteration == 2:
+                print("stop")
+            task.put({iteration: param})
+            iteration_count = iteration_count + 1
 
-            while True:
+            if iteration_count % 5 == 0:
+                lock.acquire()
                 ret = result.get()
                 result1.append(ret)
-                if len(result1) == 2:
-                    break
-
-            if iteration_count % 2 == 0:
-                lock.acquire()
                 net.distributed_load_parameters(result1[0])
                 net.distributed_add_parameters(result1[1])
-                # net.distributed_add_parameters(result1[2])
-                # net.distributed_add_parameters(result1[3])
-                # net.distributed_add_parameters(result1[4])
-                net.distributed_average_parameters(2)
+                net.distributed_add_parameters(result1[2])
+                net.distributed_add_parameters(result1[3])
+                net.distributed_add_parameters(result1[4])
+                net.distributed_average_parameters(5)
                 param = net.distributed_save_parameters()
                 lock.release()
                 print('update finish')
@@ -313,7 +305,10 @@ if __name__ == '__main__':
     time2 = time.time()
     print(f"total time: {time2 - time1}")
 
-    # while True:
+
+        # while True:
+
+
 
     # nums = picture_extract.num_of_mnist_data(data_dir)
     # images = picture_extract.images_of_mnist_data(data_dir)
@@ -324,6 +319,7 @@ if __name__ == '__main__':
     # print(sys.getsizeof(images[2]))
     # print(sys.getsizeof(images[3]))
     # print(sys.getsizeof(images[4]))
+
 
     # nums = [x for x in range(nums)]
     # nums = np.array_split(nums, 1000)

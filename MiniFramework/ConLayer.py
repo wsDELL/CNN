@@ -72,40 +72,40 @@ class ConLayer(layer):
         self.WB.dB = self.WB.dB.astype('float32')
         return delta_out, self.WB.dW, self.WB.dB
 
-    def _forward_numba(self, input_v: np.ndarray, train=True):
-        assert (input_v.ndim == 4)
-        self.input_v = input_v
-        self.batch_size = self.input_v.shape[0]
-        self.input_width = input_v.shape[2]
-        self.input_height = input_v.shape[3]
-        _output_shape = calculate_output_size(self.input_height, self.input_width, self.filter_height,
-                                              self.filter_width,
-                                              self.padding, stride=self.stride)
-        self.output_shape = (self.output_channel, _output_shape[0], _output_shape[1])
-        if self.padding > 0:
-            img = np.pad(self.input_v, [(0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding)],
-                         'constant')
-        else:
-            img = self.input_v
-
-        self.output_v = jit_cov2d(img, self.WB.W, self.WB.B, _output_shape[0], _output_shape[1])
-        return self.output_v
-
-    def _backward_numba(self, delta_in: np.ndarray, flag):
-        assert (delta_in.ndim == 4)
-        assert (delta_in.shape == self.output_v.shape)
-
-        dz_stride_1 = expand_delta_map(delta_in, self.batch_size, self.output_channel, self.input_height,
-                                       self.input_width, self.output_shape[0], self.output_shape[1],
-                                       self.filter_height, self.filter_width, self.padding, self.stride)
-        self._calculate_weightsbias_grad(dz_stride_1)
-        (pad_h, pad_w) = calculate_padding_size(
-            dz_stride_1.shape[2], dz_stride_1.shape[3],
-            self.filter_height, self.filter_width,
-            self.input_height, self.input_width)
-        dz_padded = np.pad(dz_stride_1, ((0, 0), (0, 0), (pad_h, pad_h), (pad_w, pad_w)), 'constant')
-        delta_out = self._calculate_delta_out(dz_padded, flag)
-        return delta_out, self.WB.dW, self.WB.dB
+    # def _forward_numba(self, input_v: np.ndarray, train=True):
+    #     assert (input_v.ndim == 4)
+    #     self.input_v = input_v
+    #     self.batch_size = self.input_v.shape[0]
+    #     self.input_width = input_v.shape[2]
+    #     self.input_height = input_v.shape[3]
+    #     _output_shape = calculate_output_size(self.input_height, self.input_width, self.filter_height,
+    #                                           self.filter_width,
+    #                                           self.padding, stride=self.stride)
+    #     self.output_shape = (self.output_channel, _output_shape[0], _output_shape[1])
+    #     if self.padding > 0:
+    #         img = np.pad(self.input_v, [(0, 0), (0, 0), (self.padding, self.padding), (self.padding, self.padding)],
+    #                      'constant')
+    #     else:
+    #         img = self.input_v
+    #
+    #     self.output_v = jit_cov2d(img, self.WB.W, self.WB.B, _output_shape[0], _output_shape[1])
+    #     return self.output_v
+    #
+    # def _backward_numba(self, delta_in: np.ndarray, flag):
+    #     assert (delta_in.ndim == 4)
+    #     assert (delta_in.shape == self.output_v.shape)
+    #
+    #     dz_stride_1 = expand_delta_map(delta_in, self.batch_size, self.output_channel, self.input_height,
+    #                                    self.input_width, self.output_shape[0], self.output_shape[1],
+    #                                    self.filter_height, self.filter_width, self.padding, self.stride)
+    #     self._calculate_weightsbias_grad(dz_stride_1)
+    #     (pad_h, pad_w) = calculate_padding_size(
+    #         dz_stride_1.shape[2], dz_stride_1.shape[3],
+    #         self.filter_height, self.filter_width,
+    #         self.input_height, self.input_width)
+    #     dz_padded = np.pad(dz_stride_1, ((0, 0), (0, 0), (pad_h, pad_h), (pad_w, pad_w)), 'constant')
+    #     delta_out = self._calculate_delta_out(dz_padded, flag)
+    #     return delta_out, self.WB.dW, self.WB.dB
 
     def _calculate_weightsbias_grad(self, dz):
         self.WB.ClearGrads()
