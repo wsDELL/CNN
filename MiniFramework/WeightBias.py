@@ -1,10 +1,34 @@
 import math
+from pathlib import Path
 
 import numpy as np
 
 from MiniFramework.util import *
 from MiniFramework.Enums import *
 from MiniFramework.Optimizer import *
+
+
+def calculate_gain(nonlinearity, param=None):
+    linear_fns = ['linear', 'conv1d', 'conv2d', 'conv3d', 'conv_transpose1d', 'conv_transpose2d',
+                  'conv_transpose3d']
+    if nonlinearity in linear_fns or nonlinearity == 'sigmoid':
+        return 1
+    elif nonlinearity == 'tanh':
+        return 5.0 / 3
+    elif nonlinearity == 'relu':
+        return math.sqrt(2.0)
+    elif nonlinearity == 'leaky_relu':
+        if param is None:
+            negative_slope = 0.01
+        elif not isinstance(param, bool) and isinstance(param, int) or isinstance(param, float):
+            negative_slope = param
+        else:
+            raise ValueError("negative_slope {} not a valid number".format(param))
+        return math.sqrt(2.0 / (1 + negative_slope ** 2))
+    elif nonlinearity == 'selu':
+        return 3.0 / 4
+    else:
+        raise ValueError("Unsupported nonlinearity {}".format(nonlinearity))
 
 
 class WeightsBias(object):
@@ -36,24 +60,38 @@ class WeightsBias(object):
             self.LoadExistingParameter()
 
     def CreateNew(self):
-        self.W = WeightsBias.InitialParameters(self.num_input, self.num_output, self.init_method)
+        self.W = WeightsBias.InitialParameters(self.num_input, self.num_output, self.init_method, nonlinearity='linear')
         self.B = np.zeros((1, self.num_output)).astype('float32')
         self.dW = np.zeros(self.W.shape).astype('float32')
         self.dB = np.zeros(self.B.shape).astype('float32')
 
     @staticmethod
-    def InitialParameters(num_input, num_output, init_method):
+    def InitialParameters(num_input, num_output, init_method, nonlinearity='linear'):
         if init_method == InitialMethod.Zero:
             W = np.zeros((num_input, num_output)).astype('float32')
+        elif init_method == InitialMethod.Uniform:
+            W = np.random.uniform(size=(num_input, num_output)).astype('float32')
         elif init_method == InitialMethod.Normal:
             W = np.random.normal(size=(num_input, num_output)).astype('float32')
         elif init_method == InitialMethod.MSRA:
             W = np.random.normal(0, np.sqrt(2 / num_output), size=(num_input, num_output)).astype('float32')
-        elif init_method == InitialMethod.Xavier:
-            t = math.sqrt(6 / (num_output + num_input))
-            W = np.random.uniform(-t, t, (num_input, num_output)).astype('float32')
-        elif init_method == InitialMethod.Kaiming:
-            pass
+        elif init_method == InitialMethod.Xavier_Uniform:
+            gain = calculate_gain(nonlinearity)
+            t = gain * math.sqrt(6.0 / float(num_output + num_input))
+            W = np.random.uniform(-t, t, size=(num_input, num_output)).astype('float32')
+        elif init_method == InitialMethod.Xavier_Normal:
+            gain = calculate_gain(nonlinearity)
+            t = gain * math.sqrt(2.0 / float(num_output + num_input))
+            W = np.random.normal(0., t, size=(num_input, num_output)).astype('float32')
+        elif init_method == InitialMethod.Kaiming_Uniform:
+            gain = calculate_gain(nonlinearity)
+            std = gain / math.sqrt(num_input)
+            bound = math.sqrt(3.0) * std
+            W = np.random.uniform(-bound, bound, size=(num_input, num_output)).astype('float32')
+        elif init_method == InitialMethod.Kaiming_Normal:
+            gain = calculate_gain(nonlinearity)
+            std = gain / math.sqrt(num_input)
+            W = np.random.normal(0,std,size=(num_input,num_output)).astype('float32')
 
         return W
 
@@ -111,8 +149,23 @@ class WeightsBias(object):
         self.B = self.B + param[self.name]['B']
 
     def distributed_AverageResultValue(self, num):
-        self.W = self.W/num
-        self.B = self.B/num
+        self.W = self.W / num
+        self.B = self.B / num
 
+    def _calculate_fan_in_and_fan_out(self, tensor: np.ndarray):
+        dimensions = tensor.ndim
+        if dimensions < 2:
+            raise ValueError("Fan in and Fan out can not be computed for tensor with less than 2 dimensions")
+        if dimensions == 2:
+            fan_in = tensor.shape[1]
+            fan_out = tensor.shape[0]
+        else:
+            num_input_fmaps = tensor.shape[1]
+            num_output_fmaps = tensor.shape[0]
+            receptive_field_size = 1
+            if tensor.ndim > 2:
+                receptive_field_size == tensor.size / (tensor.shape[0] * tensor.shape[1])
+            fan_in = num_input_fmaps * receptive_field_size
+            fan_out = num_output_fmaps * receptive_field_size
 
-            
+        return fan_in, fan_out

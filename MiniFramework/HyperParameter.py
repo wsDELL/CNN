@@ -4,7 +4,7 @@ from MiniFramework.Enums import *
 class HyperParameters(object):
     def __init__(self, eta=0.1, max_epoch=10000, batch_size=5,
                  net_type=NetType.Fitting,
-                 init_method=InitialMethod.Xavier,
+                 init_method=InitialMethod.Xavier_Uniform,
                  optimizer_name=OptimizerName.SGD,
                  stopper=None,
                  regular_name=RegularMethod.Nothing, regular_value=1.0):

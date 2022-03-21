@@ -74,7 +74,7 @@ def unpickle(file):
 def load_CIFAR_batch(filename):
     # """ load single batch of cifar """
     # # with open(filename, 'rb') as f:
-        datadict = unpickle(filename)  
+        datadict = unpickle(filename)
         X = datadict[b'data']
         Y = datadict[b'labels']
 
@@ -223,7 +223,7 @@ if __name__ == '__main__':
     params = HyperParameters(
         learning_rate, max_epoch, batch_size,
         net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier,
+        init_method=InitialMethod.Xavier_Uniform,
         optimizer_name=OptimizerName.Adam)
     dataReader = LoadData()
     # net=model()

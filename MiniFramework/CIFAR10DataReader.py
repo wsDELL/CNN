@@ -124,7 +124,7 @@ class CIFAR10DataReader(object):
         return X_new
 
     # need explicitly call this function to generate validation set
-    def GenerateValidationSet(self, k=40):
+    def GenerateValidationSet(self, k=10):
         self.num_validation = int(self.num_train / k)
         self.num_train = self.num_train - self.num_validation
         # validation set

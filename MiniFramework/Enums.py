@@ -3,10 +3,13 @@ from enum import Enum
 
 class InitialMethod(Enum):
     Zero = 0,
-    Normal = 1,
-    Xavier = 2,
-    MSRA = 3,
-    Kaiming = 4
+    Uniform = 1,
+    Normal = 2,
+    Xavier_Uniform = 3,
+    MSRA = 4,
+    Xavier_Normal = 5,
+    Kaiming_Uniform = 6,
+    Kaiming_Normal = 7
 
 
 class OptimizerName(Enum):

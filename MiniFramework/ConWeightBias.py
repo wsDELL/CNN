@@ -3,6 +3,27 @@ from MiniFramework.Enums import *
 from MiniFramework.WeightBias import *
 from MiniFramework.Optimizer import *
 
+def calculate_gain(nonlinearity, param=None):
+    linear_fns = ['linear', 'conv1d', 'conv2d', 'conv3d', 'conv_transpose1d', 'conv_transpose2d',
+                  'conv_transpose3d']
+    if nonlinearity in linear_fns or nonlinearity == 'sigmoid':
+        return 1
+    elif nonlinearity == 'tanh':
+        return 5.0 / 3
+    elif nonlinearity == 'relu':
+        return math.sqrt(2.0)
+    elif nonlinearity == 'leaky_relu':
+        if param is None:
+            negative_slope = 0.01
+        elif not isinstance(param, bool) and isinstance(param, int) or isinstance(param, float):
+            negative_slope = param
+        else:
+            raise ValueError("negative_slope {} not a valid number".format(param))
+        return math.sqrt(2.0 / (1 + negative_slope ** 2))
+    elif nonlinearity == 'selu':
+        return 3.0 / 4
+    else:
+        raise ValueError("Unsupported nonlinearity {}".format(nonlinearity))
 
 class ConWeightBias(WeightsBias):
     def __init__(self, input_c, output_c, filter_w, filter_h, init_method, optimizer_name, eta):
@@ -53,20 +74,36 @@ class ConWeightBias(WeightsBias):
 
 
     @staticmethod
-    def InitialConvParameters(shape, init_method):
+    def InitialConvParameters(shape, init_method, nonlinearity='conv2d'):
         assert (len(shape) == 4)
-        num_input = shape[2]
-        num_output = shape[3]
+        num_input = shape[1]
+        num_output = shape[0]
 
         if init_method == InitialMethod.Zero:
             W = np.zeros(shape).astype('float32')
+        elif init_method == InitialMethod.Uniform:
+            W = np.random.uniform(shape).astype('float32')
         elif init_method == InitialMethod.Normal:
             W = np.random.normal(shape).astype('float32')
         elif init_method == InitialMethod.MSRA:
             W = np.random.normal(0, np.sqrt(2 / num_input * num_output), shape).astype('float32')
-        elif init_method == InitialMethod.Xavier:
-            t = math.sqrt(6 / (num_output + num_input))
+        elif init_method == InitialMethod.Xavier_Uniform:
+            gain = calculate_gain(nonlinearity)
+            t = gain * math.sqrt(6.0 / float(num_output + num_input))
             W = np.random.uniform(-t, t, shape).astype('float32')
+        elif init_method == InitialMethod.Xavier_Normal:
+            gain = calculate_gain(nonlinearity)
+            t = gain * math.sqrt(2.0 / float(num_output + num_input))
+            W = np.random.normal(0., t, size=(num_input, num_output)).astype('float32')
+        elif init_method == InitialMethod.Kaiming_Uniform:
+            gain = calculate_gain(nonlinearity)
+            std = gain / math.sqrt(num_input)
+            bound = math.sqrt(3.0) * std
+            W = np.random.uniform(-bound, bound, shape).astype('float32')
+        elif init_method == InitialMethod.Kaiming_Normal:
+            gain = calculate_gain(nonlinearity)
+            std = gain / math.sqrt(num_input)
+            W = np.random.normal(0, std, size=(num_input, num_output)).astype('float32')
         return W
 
 
