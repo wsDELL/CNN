@@ -233,7 +233,7 @@ if __name__ == '__main__':
     params = HyperParameters(
         learning_rate, max_epoch, batch_size,
         net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier,
+        init_method=InitialMethod.Kaiming_Uniform,
         optimizer_name=OptimizerName.Adam)
     lock = multiprocessing.Lock()
     dataReader = LoadData()
@@ -251,7 +251,7 @@ if __name__ == '__main__':
         net.hp.batch_size = dataReader.num_train
     checkpoint = 0.05
     max_iteration = math.ceil(dataReader.num_train / net.hp.batch_size)
-    checkpoint_iteration = int(math.ceil(max_iteration * checkpoint))
+    checkpoint_iteration = int(max_iteration * checkpoint)
     need_stop = False
     QueueManager.register('get_task_queue', callable=return_task_queue)
     QueueManager.register('get_result_queue', callable=return_result_queue)
@@ -268,23 +268,34 @@ if __name__ == '__main__':
         print(f"epoch {epoch} start")
         # dataReader.Shuffle()
         iteration_count = 0
-        for iteration in range(max_iteration):
-            print('put task %d' % iteration)
-            if iteration == 2:
-                print("stop")
-            task.put({iteration: param})
-            iteration_count = iteration_count + 1
+        total_iteration_count = 0
+        for iteration in range(0, max_iteration, 2):
+            while True:
+                print('put task %d' % total_iteration_count)
+                if total_iteration_count == 359:
+                    print(f"{total_iteration_count}")
+                task.put({total_iteration_count: param})
+                iteration_count = iteration_count + 1
+                total_iteration_count = total_iteration_count + 1
 
-            if iteration_count % 5 == 0:
-                lock.acquire()
+
+                if iteration_count % 2 == 0:
+                    break
+            lock.acquire()
+            while True:
                 ret = result.get()
                 result1.append(ret)
+                if len(result1) == 2:
+                    break
+
+            if iteration_count % 2 == 0:
+
                 net.distributed_load_parameters(result1[0])
                 net.distributed_add_parameters(result1[1])
-                net.distributed_add_parameters(result1[2])
-                net.distributed_add_parameters(result1[3])
-                net.distributed_add_parameters(result1[4])
-                net.distributed_average_parameters(5)
+                # net.distributed_add_parameters(result1[2])
+                # net.distributed_add_parameters(result1[3])
+                # net.distributed_add_parameters(result1[4])
+                net.distributed_average_parameters(2)
                 param = net.distributed_save_parameters()
                 lock.release()
                 print('update finish')
@@ -292,9 +303,11 @@ if __name__ == '__main__':
                 iteration_count = 0
             batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration)
             total_iteration = epoch * max_iteration + iteration
+            if total_iteration_count == max_iteration:
+                total_iteration_count = 0
 
-            # if (total_iteration + 1) % checkpoint_iteration == 0:
-            #     need_stop = net.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
+            # if (total_iteration_count + 1) % checkpoint_iteration == 0:
+            #     need_stop = net.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration_count)
             #     if need_stop:
             #         break
             # name = list(ret.keys())[0]

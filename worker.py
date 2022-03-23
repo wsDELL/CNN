@@ -69,7 +69,7 @@ def LoadData1():
 
 def model():
     num_output = 10
-    max_epoch = 5
+    max_epoch = 75
     batch_size = 128
     learning_rate = 0.1
     params = HyperParameters(

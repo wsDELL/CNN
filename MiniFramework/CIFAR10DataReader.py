@@ -2,6 +2,7 @@ import numpy as np
 
 from MiniFramework.util import *
 from MiniFramework.Enums import *
+import random
 
 
 class CIFAR10DataReader(object):
@@ -28,31 +29,32 @@ class CIFAR10DataReader(object):
         # train_file = Path(self.train_file_name)
         # if train_file.exists():
         #     data = np.load(self.train_file_name)
-            self.XTrainRaw = self.XTrainRaw.astype('float32')
-            self.YTrainRaw = self.YTrainRaw.astype('int32')
-            self.YTrainRaw = self.YTrainRaw.reshape(self.YTrainRaw.size,1)
-            assert (self.XTrainRaw.shape[0] == self.YTrainRaw.shape[0])
-            self.num_train = self.XTrainRaw.shape[0]
-            self.num_feature = self.XTrainRaw.shape[1]
-            self.num_category = len(np.unique(self.YTrainRaw))
-            self.XTrain = self.XTrainRaw
-            self.YTrain = self.YTrainRaw
+        self.XTrainRaw = self.XTrainRaw.astype('float32')
+        self.YTrainRaw = self.YTrainRaw.astype('int32')
+        self.YTrainRaw = self.YTrainRaw.reshape(self.YTrainRaw.size, 1)
+        assert (self.XTrainRaw.shape[0] == self.YTrainRaw.shape[0])
+        self.num_train = self.XTrainRaw.shape[0]
+        self.num_feature = self.XTrainRaw.shape[1]
+        self.num_category = len(np.unique(self.YTrainRaw))
+        self.XTrain = self.XTrainRaw
+        self.YTrain = self.YTrainRaw
         # else:
         #     raise Exception("No train file")
 
         # test_file = Path(self.test_file_name)
         # if test_file.exists():
         #     data = np.load(self.test_file_name)
-            self.XTestRaw = self.XTestRaw.astype('float32')
-            self.YTestRaw = self.YTestRaw.astype('int32')
-            self.YTestRaw = self.YTestRaw.reshape(self.YTestRaw.size,1)
-            assert (self.XTestRaw.shape[0] == self.YTestRaw.shape[0])
-            self.XTest = self.XTestRaw
-            self.YTest = self.YTestRaw
-            self.XDev = self.XTest
-            self.YDev = self.YTest
-        # else:
-        #     raise Exception("No test file")
+        self.XTestRaw = self.XTestRaw.astype('float32')
+        self.YTestRaw = self.YTestRaw.astype('int32')
+        self.YTestRaw = self.YTestRaw.reshape(self.YTestRaw.size, 1)
+        assert (self.XTestRaw.shape[0] == self.YTestRaw.shape[0])
+        self.XTest = self.XTestRaw
+        self.YTest = self.YTestRaw
+        self.XDev = self.XTest
+        self.YDev = self.YTest
+
+    # else:
+    #     raise Exception("No test file")
 
     def NormalizeX(self):
         self.XTrain = self.__NormalizeData(self.XTrainRaw)
@@ -62,7 +64,7 @@ class CIFAR10DataReader(object):
         X_New = np.zeros(XRawData.shape).astype('float32')
         x_max = np.max(XRawData)
         x_min = np.min(XRawData)
-        X_New = (XRawData - x_min)/(x_max - x_min)
+        X_New = (XRawData - x_min) / (x_max - x_min)
         return X_New
 
     def NormalizeY(self, nettype, base=0):
@@ -143,7 +145,12 @@ class CIFAR10DataReader(object):
     # achieve batch data set
     def GetBatchTrainSamples(self, batch_size, iteration):
         start = iteration * batch_size
+        # if start > self.num_train:
+        #     iteration = iteration - 1
+        # start = iteration * batch_size
         end = start + batch_size
+        # if self.num_train - end <0:
+        #     end = self.num_train
         batch_X = self.XTrain[start:end, :]
         batch_Y = self.YTrain[start:end, :]
         return batch_X, batch_Y
@@ -156,5 +163,15 @@ class CIFAR10DataReader(object):
         XP = np.random.permutation(self.XTrain)
         np.random.seed(seed)
         YP = np.random.permutation(self.YTrain)
+        self.XTrain = XP
+        self.YTrain = YP
+
+    def distributed_Shuffle(self):
+        seed = random.randint(0, 100)
+        random.seed(seed)
+        data_order = [i for i in range(len(self.XTrain))]
+        random.shuffle(data_order)
+        XP = self.XTrain[data_order, :, :, :]
+        YP = self.YTrain[data_order, :]
         self.XTrain = XP
         self.YTrain = YP

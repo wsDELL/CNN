@@ -54,7 +54,7 @@ def LoadData():
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
     mdr.Shuffle()
-    mdr.GenerateValidationSet(k=12)
+    mdr.GenerateValidationSet(k=10)
     return mdr
 
 def LoadData1():
@@ -210,16 +210,16 @@ if __name__ == '__main__':
     dataReader = LoadData()
     # net = model()
     num_output = 10
-    max_epoch = 5
+    max_epoch = 75
     batch_size = 128
     learning_rate = 0.01
     params = HyperParameters(
         learning_rate, max_epoch, batch_size,
         net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier,
+        init_method=InitialMethod.Kaiming_Uniform,
         optimizer_name=OptimizerName.Adam)
     net = VGG(param=params,vgg_name="VGG11")
-    server_address = '192.168.0.225'
+    server_address = '131.181.249.163'
     print('connect to server %s...' % server_address)
 
     manager = QueueManager(address=(server_address, 5006), authkey=b'abc')
@@ -241,6 +241,8 @@ if __name__ == '__main__':
         net.distributed_load_parameters(iteration)
         batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, name)
         print(f'worker get {name}')
+        if name == 359:
+            print(f"{name}")
         param = net.distributed_train(batch_x,batch_y)
         iteration[name] = param
         result.put(iteration)
