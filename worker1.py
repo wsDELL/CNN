@@ -54,7 +54,7 @@ def LoadData():
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
     mdr.Shuffle()
-    mdr.GenerateValidationSet(k=10)
+    mdr.GenerateValidationSet(k=12)
     return mdr
 
 def LoadData1():
@@ -143,8 +143,8 @@ def model1():
     learning_rate = 0.1
     params = HyperParameters(learning_rate, max_epoch, batch_size,
                              net_type=NetType.MultipleClassifier,
-                             init_method=InitialMethod.Xavier,
-                             optimizer_name=OptimizerName.SGD)
+                             init_method=InitialMethod.Kaiming_Uniform,
+                             optimizer_name=OptimizerName.Adam)
 
     net = NeuralNet(params,"alexnet")
 
@@ -241,8 +241,6 @@ if __name__ == '__main__':
         net.distributed_load_parameters(iteration)
         batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, name)
         print(f'worker get {name}')
-        if name == 359:
-            print(f"{name}")
         param = net.distributed_train(batch_x,batch_y)
         iteration[name] = param
         result.put(iteration)

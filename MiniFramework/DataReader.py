@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 
 from MiniFramework.util import *
@@ -163,5 +165,18 @@ class DataReader(object):
         XP = np.random.permutation(self.XTrain)
         np.random.seed(seed)
         YP = np.random.permutation(self.YTrain)
+        self.XTrain = XP
+        self.YTrain = YP
+
+    def data_Shuffle(self):
+        seed = random.randint(0, 100)
+        random.seed(seed)
+        order = [i for i in range(len(self.XTrain))]
+        random.shuffle(order)
+        return order
+
+    def reorder(self,new_order):
+        XP = self.XTrain[new_order,:,:,:]
+        YP = self.YTrain[new_order,:]
         self.XTrain = XP
         self.YTrain = YP

@@ -54,7 +54,7 @@ def LoadData():
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
     mdr.Shuffle()
-    mdr.GenerateValidationSet(k=10)
+    mdr.GenerateValidationSet(k=12)
     return mdr
 
 def LoadData1():

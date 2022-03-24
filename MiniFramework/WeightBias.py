@@ -164,7 +164,7 @@ class WeightsBias(object):
             num_output_fmaps = tensor.shape[0]
             receptive_field_size = 1
             if tensor.ndim > 2:
-                receptive_field_size == tensor.size / (tensor.shape[0] * tensor.shape[1])
+                receptive_field_size = tensor.size / (tensor.shape[0] * tensor.shape[1])
             fan_in = num_input_fmaps * receptive_field_size
             fan_out = num_output_fmaps * receptive_field_size
 

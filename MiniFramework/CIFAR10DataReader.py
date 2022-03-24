@@ -166,12 +166,15 @@ class CIFAR10DataReader(object):
         self.XTrain = XP
         self.YTrain = YP
 
-    def distributed_Shuffle(self):
+    def data_Shuffle(self):
         seed = random.randint(0, 100)
         random.seed(seed)
-        data_order = [i for i in range(len(self.XTrain))]
-        random.shuffle(data_order)
-        XP = self.XTrain[data_order, :, :, :]
-        YP = self.YTrain[data_order, :]
+        order = [i for i in range(len(self.XTrain))]
+        random.shuffle(order)
+        return order
+
+    def reorder(self,new_order):
+        XP = self.XTrain[new_order,:,:,:]
+        YP = self.YTrain[new_order,:]
         self.XTrain = XP
         self.YTrain = YP

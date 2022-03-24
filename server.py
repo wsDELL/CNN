@@ -1,10 +1,7 @@
-import random
 import multiprocessing
-import sys
-from multiprocessing.managers import BaseManager
 from multiprocessing import Queue
-import numpy as np
-from MiniFramework import *
+from multiprocessing.managers import BaseManager
+
 from Model.vgg import *
 
 train_x = "./data/MNIST/raw/train-images-idx3-ubyte"
@@ -12,7 +9,8 @@ train_y = "./data/MNIST/raw/train-labels-idx1-ubyte"
 test_x = "./data/MNIST/raw/t10k-images-idx3-ubyte"
 test_y = "./data/MNIST/raw/t10k-labels-idx1-ubyte"
 
-cifar_name = ["data_batch_1","data_batch_2","data_batch_3","data_batch_4","data_batch_5"]
+cifar_name = ["data_batch_1", "data_batch_2", "data_batch_3", "data_batch_4", "data_batch_5"]
+
 
 def unpickle(file):
     import pickle
@@ -24,23 +22,24 @@ def unpickle(file):
 def load_CIFAR_batch(filename):
     # """ load single batch of cifar """
     # # with open(filename, 'rb') as f:
-        datadict = unpickle(filename)  # dict类型
-        X = datadict[b'data']  # X, ndarray, 像素值
-        Y = datadict[b'labels']  # Y, list, 标签, 分类
+    datadict = unpickle(filename)  # dict类型
+    X = datadict[b'data']  # X, ndarray, 像素值
+    Y = datadict[b'labels']  # Y, list, 标签, 分类
 
-        X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
-        Y = np.array(Y)
-        return X, Y
+    X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
+    Y = np.array(Y)
+    return X, Y
+
 
 def LoadData():
     for i in range(len(cifar_name)):
         if i == 0:
-            train_x,train_y=load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
+            train_x, train_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
         else:
-            train_X,train_Y=load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
-            train_x = np.concatenate((train_x,train_X))
-            train_y = np.concatenate((train_y,train_Y))
-    test_x,test_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/test_batch")
+            train_X, train_Y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
+            train_x = np.concatenate((train_x, train_X))
+            train_y = np.concatenate((train_y, train_Y))
+    test_x, test_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/test_batch")
 
     mdr = CIFAR10DataReader(train_x, train_y, test_x, test_y)
     # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
@@ -70,7 +69,7 @@ def model():
     params = HyperParameters(
         learning_rate, max_epoch, batch_size,
         net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier,
+        init_method=InitialMethod.Xavier_Uniform,
         optimizer_name=OptimizerName.Momentum)
 
     net = NeuralNet(params, "mnist_cnn")
@@ -100,7 +99,6 @@ def model():
     net.add_layer(f4, "f2")
     s4 = Softmax()
     net.add_layer(s4, "s4")
-
 
     # c1 = ConLayer((1, 28, 28), (8, 3, 3), params, stride=1, padding=0)
     # net.add_layer(c1, "c1")
@@ -138,10 +136,10 @@ def model1():
     learning_rate = 0.1
     params = HyperParameters(learning_rate, max_epoch, batch_size,
                              net_type=NetType.MultipleClassifier,
-                             init_method=InitialMethod.Xavier,
+                             init_method=InitialMethod.Xavier_Uniform,
                              optimizer_name=OptimizerName.SGD)
 
-    net = NeuralNet(params,"alexnet")
+    net = NeuralNet(params, "alexnet")
 
     c1 = ConLayer((1, 28, 28), (32, 3, 3), params, stride=1, padding=1)
     net.add_layer(c1, "c1")
@@ -238,7 +236,7 @@ if __name__ == '__main__':
     lock = multiprocessing.Lock()
     dataReader = LoadData()
     # net = model()
-    net = VGG(param=params,vgg_name="VGG11")
+    net = VGG(param=params, vgg_name="VGG11")
     param = net.distributed_save_parameters()
     # net.train(dataReader, checkpoint=0.05, need_test=True)
     net.loss_func = LossFunction(net.hp.net_type)
@@ -251,11 +249,11 @@ if __name__ == '__main__':
         net.hp.batch_size = dataReader.num_train
     checkpoint = 0.05
     max_iteration = math.ceil(dataReader.num_train / net.hp.batch_size)
-    checkpoint_iteration = int(max_iteration * checkpoint)
+    checkpoint_iteration = int(math.ceil(max_iteration * checkpoint))
     need_stop = False
     QueueManager.register('get_task_queue', callable=return_task_queue)
     QueueManager.register('get_result_queue', callable=return_result_queue)
-
+    QueueManager.register('')
     manager = QueueManager(address=('131.181.249.163', 5006), authkey=b'abc')
     manager.start()
     # s = manager.get_server()
@@ -264,52 +262,51 @@ if __name__ == '__main__':
     task = manager.get_task_queue()
     result = manager.get_result_queue()
     result1 = []
+    n = 2
     for epoch in range(net.hp.max_epoch):
         print(f"epoch {epoch} start")
-        # dataReader.Shuffle()
+        dataReader.Shuffle()
         iteration_count = 0
         total_iteration_count = 0
-        for iteration in range(0, max_iteration, 2):
+        final = False
+        average_num = n
+        for iteration in range(0, max_iteration, n):
             while True:
                 print('put task %d' % total_iteration_count)
-                if total_iteration_count == 359:
-                    print(f"{total_iteration_count}")
                 task.put({total_iteration_count: param})
                 iteration_count = iteration_count + 1
                 total_iteration_count = total_iteration_count + 1
-
-
-                if iteration_count % 2 == 0:
+                if (total_iteration_count + 1) == max_iteration:
+                    final = True
+                    break
+                if iteration_count % n == 0:
                     break
             lock.acquire()
             while True:
                 ret = result.get()
                 result1.append(ret)
-                if len(result1) == 2:
+                if final == True and len(result1) == iteration_count:
+                    average_num = iteration_count
                     break
-
-            if iteration_count % 2 == 0:
-
-                net.distributed_load_parameters(result1[0])
-                net.distributed_add_parameters(result1[1])
-                # net.distributed_add_parameters(result1[2])
-                # net.distributed_add_parameters(result1[3])
-                # net.distributed_add_parameters(result1[4])
-                net.distributed_average_parameters(2)
-                param = net.distributed_save_parameters()
-                lock.release()
-                print('update finish')
-                result1 = []
-                iteration_count = 0
-            batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration)
-            total_iteration = epoch * max_iteration + iteration
-            if total_iteration_count == max_iteration:
-                total_iteration_count = 0
-
-            # if (total_iteration_count + 1) % checkpoint_iteration == 0:
-            #     need_stop = net.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration_count)
+                if len(result1) == n:
+                    break
+            for i in range(len(result1)):
+                net.distributed_load_parameters(result1[i])
+            net.distributed_average_parameters(average_num)
+            param = net.distributed_save_parameters()
+            lock.release()
+            print('update finish')
+            result1 = []
+            iteration_count = 0
+            # batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, total_iteration_count)
+            # total_iteration = epoch * max_iteration + total_iteration_count
+            # if (total_iteration/n + 1) % checkpoint_iteration == 0:
+            #     need_stop = net.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
             #     if need_stop:
             #         break
+            if max_iteration - total_iteration_count < n:
+                total_iteration_count = 0
+                break
             # name = list(ret.keys())[0]
             # print(name)
     print("testing...")
@@ -318,10 +315,7 @@ if __name__ == '__main__':
     time2 = time.time()
     print(f"total time: {time2 - time1}")
 
-
-        # while True:
-
-
+    # while True:
 
     # nums = picture_extract.num_of_mnist_data(data_dir)
     # images = picture_extract.images_of_mnist_data(data_dir)
@@ -332,7 +326,6 @@ if __name__ == '__main__':
     # print(sys.getsizeof(images[2]))
     # print(sys.getsizeof(images[3]))
     # print(sys.getsizeof(images[4]))
-
 
     # nums = [x for x in range(nums)]
     # nums = np.array_split(nums, 1000)

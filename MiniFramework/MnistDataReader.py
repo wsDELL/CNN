@@ -130,6 +130,18 @@ class MnistDataReader(DataReader):
         self.YTrain = YP
         return self.XTrain, self.YTrain
 
+    def data_Shuffle(self):
+        seed = random.randint(0, 100)
+        random.seed(seed)
+        order = [i for i in range(len(self.XTrain))]
+        random.shuffle(order)
+        return order
+
+    def reorder(self,new_order):
+        XP = self.XTrain[new_order,:,:,:]
+        YP = self.YTrain[new_order,:]
+        self.XTrain = XP
+        self.YTrain = YP
 
 
 

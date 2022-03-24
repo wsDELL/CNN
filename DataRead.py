@@ -1,3 +1,6 @@
+import time
+from multiprocessing import managers, Queue, Value
+
 from Model.vgg import *
 
 cifar_name = ["data_batch_1","data_batch_2","data_batch_3","data_batch_4","data_batch_5"]
@@ -35,13 +38,34 @@ def LoadData():
     mdr.ReadData()
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
-    # mdr.Shuffle()
-    mdr.distributed_Shuffle()
+    mdr.Shuffle()
+    # mdr.distributed_Shuffle()
     mdr.GenerateValidationSet(k=12)
     return mdr
 
+class queuemanager(managers.BaseManager):
+    pass
+
+order_queue = Queue()
+def return_order_queue():
+    global order_queue
+    return order_queue
 
 if __name__ == "__main__":
     datareader = LoadData()
-    batch_x, batch_y = datareader.GetBatchTrainSamples(batch_size=128,iteration=358)
-    print(batch_y)
+    new_order = datareader.data_Shuffle()
+    queuemanager.register("send_order", callable=return_order_queue)
+    manager = queuemanager(address=("131.181.249.163", 10004), authkey=b"abc")
+    manager.start()
+    order = manager.send_order()
+    conut = 0
+    n = 2
+    while True:
+        order.put(new_order)
+        conut = conut +1
+        if conut == n:
+            break
+    time.sleep(100)
+    manager.shutdown()
+
+
