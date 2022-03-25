@@ -94,7 +94,7 @@ class ConWeightBias(WeightsBias):
         elif init_method == InitialMethod.Xavier_Normal:
             gain = calculate_gain(nonlinearity)
             t = gain * math.sqrt(2.0 / float(num_output + num_input))
-            W = np.random.normal(0., t, size=(num_input, num_output)).astype('float32')
+            W = np.random.normal(0., t, shape).astype('float32')
         elif init_method == InitialMethod.Kaiming_Uniform:
             gain = calculate_gain(nonlinearity)
             std = gain / math.sqrt(num_input)
@@ -103,7 +103,7 @@ class ConWeightBias(WeightsBias):
         elif init_method == InitialMethod.Kaiming_Normal:
             gain = calculate_gain(nonlinearity)
             std = gain / math.sqrt(num_input)
-            W = np.random.normal(0, std, size=(num_input, num_output)).astype('float32')
+            W = np.random.normal(0, std, shape).astype('float32')
         return W
 
 

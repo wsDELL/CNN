@@ -162,9 +162,9 @@ class DataReader(object):
     def Shuffle(self):
         seed = np.random.randint(0, 100)
         np.random.seed(seed)
-        XP = np.random.permutation(self.XTrain)
-        np.random.seed(seed)
-        YP = np.random.permutation(self.YTrain)
+        order = np.random.permutation(len(self.XTrain))
+        XP = self.XTrain[order, :, :, :]
+        YP = self.YTrain[order, :]
         self.XTrain = XP
         self.YTrain = YP
 

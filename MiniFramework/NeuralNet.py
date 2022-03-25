@@ -1,7 +1,7 @@
 import math
 
 from MiniFramework import *
-from MiniFramework import Layer
+from MiniFramework import FCLayer, ConLayer
 from MiniFramework.LossFunction import *
 from MiniFramework.TrainingHistory import *
 import os
@@ -76,9 +76,9 @@ class NeuralNet(object):
         max_iteration = math.ceil(dataReader.num_train / self.hp.batch_size)
         checkpoint_iteration = int(math.ceil(max_iteration * checkpoint))
         need_stop = False
+        valid_count = 0
         for epoch in range(self.hp.max_epoch):
             dataReader.Shuffle()
-
             for iteration in range(max_iteration):
                 # get x and y value for one sample
                 batch_x, batch_y = dataReader.GetBatchTrainSamples(self.hp.batch_size, iteration)
@@ -100,12 +100,17 @@ class NeuralNet(object):
                       f"backward time: {time3 - time2}, update time: {time4 - time3},total time: {time4 - time1}")
 
                 total_iteration = epoch * max_iteration + iteration
+
                 if (total_iteration + 1) % checkpoint_iteration == 0:
                     self.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
+                    self.SaveLossHistory(valid_count)
+                    valid_count = valid_count + 1
                     if need_stop:
                         break
 
             self.save_parameters()
+
+
             if need_stop:
                 break
             # end if
@@ -160,11 +165,11 @@ class NeuralNet(object):
         regular_cost = 0
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
-            if isinstance(layer, Layer.layer):
+            if isinstance(layer,MiniFramework.FCLayer) or isinstance(layer, MiniFramework.ConLayer):
                 if regularName == RegularMethod.L1:
-                    regular_cost += np.sum(np.abs(layer.wb.W))
+                    regular_cost += np.sum(np.abs(layer.WB.W))
                 elif regularName == RegularMethod.L2:
-                    regular_cost += np.sum(np.square(layer.wb.W))
+                    regular_cost += np.sum(np.square(layer.WB.W))
             # end if
         # end for
         return regular_cost * self.hp.regular_value
@@ -224,17 +229,21 @@ class NeuralNet(object):
         title = str.format("{0},accuracy={1:.4f}", self.hp.toString(), self.accuracy)
         self.loss_trace.ShowLossHistory(title, xcoor, xmin, xmax, ymin, ymax)
 
-    def SaveLossHistory(self):
+    def SaveLossHistory(self,valid_count):
         # path = self.subfolder
+
         name_attribute = ['epoch', 'iteration', 'training_loss', 'training_accuracy', 'validating_loss',
                           'validating_accuracy']
-        csvFile = open('history_data.csv',"w+", newline='')
+        csvFile = open('history_data.csv', "w+", newline='')
         try:
             writer = csv.writer(csvFile)
-            writer.writerow(name_attribute)
-            for i in range(len(self.loss_trace.iteration_seq)):
-                writer.writerow([self.loss_trace.epoch_seq[i],self.loss_trace.iteration_seq[i],self.loss_trace.training_loss[i],
-                                 self.loss_trace.training_accuracy[i],self.loss_trace.val_loss[i],self.loss_trace.val_accuracy[i]])
+            if valid_count == 0:
+                writer.writerow(name_attribute)
+
+            writer.writerow(
+                    [self.loss_trace.epoch_seq[valid_count], self.loss_trace.iteration_seq[valid_count], self.loss_trace.training_loss[valid_count],
+                     self.loss_trace.training_accuracy[valid_count], self.loss_trace.val_loss[valid_count],
+                     self.loss_trace.val_accuracy[valid_count]])
         finally:
             csvFile.close()
 

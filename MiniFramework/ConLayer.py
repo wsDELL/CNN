@@ -22,6 +22,8 @@ class ConLayer(layer):
         self.batch_size = None
         self.output_v = None
         self.name = None
+        self.regular_name = hp.regular_name
+        self.regular_value = hp.regular_value
 
     def initialize(self, folder, name, create_new=True):
         self.WB = ConWeightBias(self.input_channel, self.output_channel, self.filter_height, self.filter_width,
@@ -62,8 +64,18 @@ class ConLayer(layer):
         col_delta_in = np.transpose(delta_in, axes=(0, 2, 3, 1)).reshape(-1, self.output_channel)
         self.WB.dB = np.sum(col_delta_in, axis=0, keepdims=True).T / self.batch_size
         col_dW = np.dot(self.col_x.T, col_delta_in) / self.batch_size
-        self.WB.dW = np.transpose(col_dW, axes=(1, 0)).reshape(self.output_channel, self.input_channel,
-                                                               self.filter_height, self.filter_width)
+        if self.regular_name == RegularMethod.L2:
+            self.WB.dW = np.transpose(col_dW, axes=(1, 0)).reshape(self.output_channel, self.input_channel,
+                                                                   self.filter_height,
+                                                                   self.filter_width) + self.regular_value * self.WB.W / self.batch_size
+        elif self.regular_name == RegularMethod.L1:
+            self.WB.dW = np.transpose(col_dW, axes=(1, 0)).reshape(self.output_channel, self.input_channel,
+                                                               self.filter_height, self.filter_width) + self.regular_value * np.sign(self.WB.W) / self.batch_size
+        else:
+            self.WB.dW = np.transpose(col_dW, axes=(1, 0)).reshape(self.output_channel, self.input_channel,
+                                                                   self.filter_height, self.filter_width)
+
+
         col_delta_out = np.dot(col_delta_in, self.col_w.T)
         delta_out = col2img(col_delta_out, self.input_v.shape, self.filter_height, self.filter_width, self.stride,
                             self.padding, self.output_shape[1],
@@ -107,33 +119,33 @@ class ConLayer(layer):
     #     delta_out = self._calculate_delta_out(dz_padded, flag)
     #     return delta_out, self.WB.dW, self.WB.dB
 
-    def _calculate_weightsbias_grad(self, dz):
-        self.WB.ClearGrads()
-        (pad_h, pad_w) = calculate_padding_size(
-            self.input_height, self.input_width,
-            dz.shape[2], dz.shape[3],
-            self.filter_height, self.filter_width, 1)
-        input_padded = np.pad(self.input_v, ((0, 0), (0, 0), (pad_h, pad_h), (pad_w, pad_w)), 'constant')
-        (self.WB.dW, self.WB.dB) = calcalate_weights_grad(
-            input_padded, dz, self.batch_size,
-            self.output_channel, self.input_channel,
-            self.filter_height, self.filter_width,
-            self.WB.dW, self.WB.dB)
-        self.WB.MeanGrads(self.batch_size)
-
-    def _calculate_delta_out(self, dz, layer_idx):
-        if layer_idx == 0:
-            return None
-            # 旋转卷积核180度
-        rot_weights = self.WB.Rotate180()
-        # 定义输出矩阵形状
-        delta_out = np.zeros(self.input_v.shape).astype(np.float32)
-        # 输入梯度矩阵卷积旋转后的卷积核，得到输出梯度矩阵
-        delta_out = calculate_delta_out(dz, rot_weights, self.batch_size,
-                                        self.input_channel, self.output_channel,
-                                        self.input_height, self.input_width, delta_out)
-
-        return delta_out
+    # def _calculate_weightsbias_grad(self, dz):
+    #     self.WB.ClearGrads()
+    #     (pad_h, pad_w) = calculate_padding_size(
+    #         self.input_height, self.input_width,
+    #         dz.shape[2], dz.shape[3],
+    #         self.filter_height, self.filter_width, 1)
+    #     input_padded = np.pad(self.input_v, ((0, 0), (0, 0), (pad_h, pad_h), (pad_w, pad_w)), 'constant')
+    #     (self.WB.dW, self.WB.dB) = calcalate_weights_grad(
+    #         input_padded, dz, self.batch_size,
+    #         self.output_channel, self.input_channel,
+    #         self.filter_height, self.filter_width,
+    #         self.WB.dW, self.WB.dB)
+    #     self.WB.MeanGrads(self.batch_size)
+    #
+    # def _calculate_delta_out(self, dz, layer_idx):
+    #     if layer_idx == 0:
+    #         return None
+    #         # 旋转卷积核180度
+    #     rot_weights = self.WB.Rotate180()
+    #     # 定义输出矩阵形状
+    #     delta_out = np.zeros(self.input_v.shape).astype(np.float32)
+    #     # 输入梯度矩阵卷积旋转后的卷积核，得到输出梯度矩阵
+    #     delta_out = calculate_delta_out(dz, rot_weights, self.batch_size,
+    #                                     self.input_channel, self.output_channel,
+    #                                     self.input_height, self.input_width, delta_out)
+    #
+    #     return delta_out
 
     def pre_update(self):
         pass

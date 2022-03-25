@@ -62,7 +62,8 @@ train_y = "./data/MNIST/raw/train-labels-idx1-ubyte"
 test_x = "./data/MNIST/raw/t10k-images-idx3-ubyte"
 test_y = "./data/MNIST/raw/t10k-labels-idx1-ubyte"
 
-cifar_name = ["data_batch_1","data_batch_2","data_batch_3","data_batch_4","data_batch_5"]
+cifar_name = ["data_batch_1", "data_batch_2", "data_batch_3", "data_batch_4", "data_batch_5"]
+
 
 def unpickle(file):
     import pickle
@@ -74,23 +75,24 @@ def unpickle(file):
 def load_CIFAR_batch(filename):
     # """ load single batch of cifar """
     # # with open(filename, 'rb') as f:
-        datadict = unpickle(filename)
-        X = datadict[b'data']
-        Y = datadict[b'labels']
+    datadict = unpickle(filename)
+    X = datadict[b'data']
+    Y = datadict[b'labels']
 
-        X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
-        Y = np.array(Y)
-        return X, Y
+    X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
+    Y = np.array(Y)
+    return X, Y
+
 
 def LoadData():
     for i in range(len(cifar_name)):
         if i == 0:
-            train_x,train_y=load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
+            train_x, train_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
         else:
-            train_X,train_Y=load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
-            train_x = np.concatenate((train_x,train_X))
-            train_y = np.concatenate((train_y,train_Y))
-    test_x,test_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/test_batch")
+            train_X, train_Y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
+            train_x = np.concatenate((train_x, train_X))
+            train_y = np.concatenate((train_y, train_Y))
+    test_x, test_y = load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/test_batch")
 
     mdr = CIFAR10DataReader(train_x, train_y, test_x, test_y)
     # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
@@ -219,21 +221,21 @@ if __name__ == '__main__':
     num_output = 10
     max_epoch = 5
     batch_size = 128
-    learning_rate = 0.001
+    learning_rate = 0.05
     params = HyperParameters(
         learning_rate, max_epoch, batch_size,
         net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier_Uniform,
-        optimizer_name=OptimizerName.Adam)
+        init_method=InitialMethod.Kaiming_Uniform,
+        optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
     dataReader = LoadData()
     # net=model()
     # net = model1()
     # net.distributed_load_parameters()
-    net = VGG(param=params,vgg_name="VGG11")
+    net = VGG(param=params, vgg_name="VGG11")
     print("start")
     net.train(dataReader, checkpoint=0.05, need_test=True)
     print("end")
     time2 = time.time()
     print(f"total time: {time2 - time1}")
     # net.ShowLossHistory(XCoordinate.Iteration)
-    net.SaveLossHistory()
+
