@@ -26,9 +26,6 @@ class CIFAR10DataReader(object):
         self.YDev = None  # validation lable set
 
     def ReadData(self):
-        # train_file = Path(self.train_file_name)
-        # if train_file.exists():
-        #     data = np.load(self.train_file_name)
         self.XTrainRaw = self.XTrainRaw.astype('float32')
         self.YTrainRaw = self.YTrainRaw.astype('int32')
         self.YTrainRaw = self.YTrainRaw.reshape(self.YTrainRaw.size, 1)
@@ -38,12 +35,6 @@ class CIFAR10DataReader(object):
         self.num_category = len(np.unique(self.YTrainRaw))
         self.XTrain = self.XTrainRaw
         self.YTrain = self.YTrainRaw
-        # else:
-        #     raise Exception("No train file")
-
-        # test_file = Path(self.test_file_name)
-        # if test_file.exists():
-        #     data = np.load(self.test_file_name)
         self.XTestRaw = self.XTestRaw.astype('float32')
         self.YTestRaw = self.YTestRaw.astype('int32')
         self.YTestRaw = self.YTestRaw.reshape(self.YTestRaw.size, 1)
@@ -57,8 +48,10 @@ class CIFAR10DataReader(object):
     #     raise Exception("No test file")
 
     def NormalizeX(self):
-        self.XTrain = self.__NormalizeData(self.XTrainRaw)
+        # self.XTrain = self.__NormalizeData(self.XTrainRaw)
+        self.XTrain = self.__NormalizeData(self.XTrain)
         self.XTest = self.__NormalizeData(self.XTestRaw)
+        self.XDev = self.__NormalizeData(self.XDev)
 
     def __NormalizeData(self, XRawData):
         X_New = np.zeros(XRawData.shape).astype('float32')
@@ -78,7 +71,8 @@ class CIFAR10DataReader(object):
             self.YTrain = self.__ToZeroOne(self.YTrainRaw, base)
             self.YTest = self.__ToZeroOne(self.YTestRaw, base)
         elif nettype == NetType.MultipleClassifier:
-            self.YTrain = self.__ToOneHot(self.YTrainRaw, base)
+            self.YDev = self.__ToOneHot(self.YDev, base)
+            self.YTrain = self.__ToOneHot(self.YTrain, base)
             self.YTest = self.__ToOneHot(self.YTestRaw, base)
 
     def __NormalizeY(self, raw_data):
@@ -160,9 +154,9 @@ class CIFAR10DataReader(object):
     def Shuffle(self):
         seed = np.random.randint(0, 100)
         np.random.seed(seed)
-        XP = np.random.permutation(self.XTrain)
-        np.random.seed(seed)
-        YP = np.random.permutation(self.YTrain)
+        order = np.random.permutation(len(self.XTrain))
+        XP = self.XTrain[order, :, :, :]
+        YP = self.YTrain[order, :]
         self.XTrain = XP
         self.YTrain = YP
 

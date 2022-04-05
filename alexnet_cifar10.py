@@ -113,52 +113,54 @@ def LoadData1():
     return mdr
 
 
-def model1():
+def Alexnet():
     num_output = 10
-    max_epoch = 20
+    max_epoch = 40
     batch_size = 128
-    learning_rate = 0.1
-    params = HyperParameters(learning_rate, max_epoch, batch_size,
-                             net_type=NetType.MultipleClassifier,
-                             init_method=InitialMethod.Xavier_Uniform,
-                             optimizer_name=OptimizerName.SGD)
+    learning_rate = 0.001
+    params = HyperParameters(
+        learning_rate, max_epoch, batch_size,
+        net_type=NetType.MultipleClassifier,
+        init_method=InitialMethod.Kaiming_Normal,
+        optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
 
     net = NeuralNet(params, "alexnet")
 
-    c1 = ConLayer(1, 32, kernel_size=3, hp=params, stride=1,padding=1)
+    c1 = ConLayer(3, 64, kernel_size=3, hp=params, stride=2,padding=1)
     net.add_layer(c1, "c1")
-    p1 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
-    net.add_layer(p1, "p1")
     r1 = ReLU()
     net.add_layer(r1, "relu1")
+    p1 = PoolingLayer(kernel_size=2,stride=2, pooling_type=PoolingTypes.MAX)
+    net.add_layer(p1, "p1")
 
-    c2 = ConLayer(32, 64, kernel_size=3, hp=params, stride=1,padding=1)
+    c2 = ConLayer(64, 192, kernel_size=3, hp=params, stride=1,padding=1)
     net.add_layer(c2, "c2")
-    p2 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
-    net.add_layer(p2, "p2")
     r2 = ReLU()
     net.add_layer(r2, "relu2")
+    p2 = PoolingLayer(kernel_size=2,stride=2, pooling_type=PoolingTypes.MAX)
+    net.add_layer(p2, "p2")
 
-    c3 = ConLayer(64, 128, kernel_size=3, hp=params, stride=1,padding=1)
+    c3 = ConLayer(192, 384, kernel_size=3, hp=params, stride=1,padding=1)
     net.add_layer(c3, "c3")
-    # r3 = ReLU()
-    # net.add_layer(r3, "relu3")
+    r3 = ReLU()
+    net.add_layer(r3, "relu3")
 
-    c4 = ConLayer(128, 256, kernel_size=3, hp=params, stride=1, padding=1)
+    c4 = ConLayer(384, 256, kernel_size=3, hp=params, stride=1, padding=1)
     net.add_layer(c4, "c3")
-    # r4 = ReLU()
-    # net.add_layer(r4, "relu4")
+    r4 = ReLU()
+    net.add_layer(r4, "relu4")
 
     c5 = ConLayer(256, 256, kernel_size=3, hp=params, stride=1, padding=1)
     net.add_layer(c5, "c3")
-    p5 = PoolingLayer(kernel_size=3, stride=2, pooling_type=PoolingTypes.MEAN)
-    net.add_layer(p5, "p2")
     r5 = ReLU()
     net.add_layer(r5, "relu5")
+    p5 = PoolingLayer(kernel_size=2,stride=2, pooling_type=PoolingTypes.MEAN)
+    net.add_layer(p5, "p2")
+
 
     # d1 = DropoutLayer()
     # net.add_layer(d1, 'd1')
-    f1 = FCLayer(256 * 3 * 3, 1024, params)
+    f1 = FCLayer(256 * 2 * 2, 1024, params)
     net.add_layer(f1, "f1")
     bn1 = BatchNormalLayer(f1.output_num)
     net.add_layer(bn1, 'bn1')
@@ -183,66 +185,17 @@ def model1():
     return net
 
 
-def model():
-    num_output = 10
-    max_epoch = 5
-    batch_size = 128
-    learning_rate = 0.1
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier_Uniform,
-        optimizer_name=OptimizerName.Momentum)
-
-    net = NeuralNet(params, "mnist_cnn")
-
-    c1 = ConLayer(1, 8, kernel_size=3, hp=params, stride=1)
-    net.add_layer(c1, "c1")
-    r1 = ReLU()
-    net.add_layer(r1, "relu1")
-    p1 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
-    net.add_layer(p1, "p1")
-
-    c2 = ConLayer(8, 16, kernel_size=3, hp=params, stride=1)
-    net.add_layer(c2, "c2")
-    r2 = ReLU()
-    net.add_layer(r2, "relu2")
-    p2 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
-    net.add_layer(p2, "p2")
-
-    f3 = FCLayer(400, 32, params)
-    net.add_layer(f3, "f3")
-    bn3 = BatchNormalLayer(32)
-    net.add_layer(bn3, "bn3")
-    r3 = ReLU()
-    net.add_layer(r3, "relu3")
-
-    f4 = FCLayer(32, 10, params)
-    net.add_layer(f4, "f2")
-    s4 = Softmax()
-    net.add_layer(s4, "s4")
-
-    return net
-
 
 if __name__ == '__main__':
     time1 = time.time()
     num_output = 10
-    max_epoch = 75
+    max_epoch = 20
     batch_size = 128
-    learning_rate = 0.001
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Kaiming_Normal,
-        optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
+    learning_rate = 0.005
     dataReader = LoadData()
-    # net=model()
-    # net = model1()
-    # net.distributed_load_parameters()
-    net = VGG(param=params, vgg_name="VGG11")
+    net = Alexnet()
     print("start")
-    net.train(dataReader, checkpoint=0.05, need_test=True)
+    net.train(dataReader, checkpoint=1, need_test=True,file_name="alexnet_loss_data.csv" )
     print("end")
     time2 = time.time()
     print(f"total time: {time2 - time1}")

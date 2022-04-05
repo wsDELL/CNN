@@ -35,7 +35,10 @@ class NeuralNet(object):
     def __forward(self, input_v, train=True):
         output = None
         for i in range(self.layer_count):
-            output = self.layer_list[i].forward(input_v, train)
+            try:
+                output = self.layer_list[i].forward(input_v, train)
+            except:
+                print(i)
             input_v = output
 
         self.output_v = output
@@ -47,6 +50,7 @@ class NeuralNet(object):
 
     def __backward(self, X, Y):
         delta_in = self.output_v - Y
+        # delta_in = CrossEntropyLoss(self.output_v,Y)
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
             delta_out = layer.backward(delta_in, i)
@@ -62,7 +66,7 @@ class NeuralNet(object):
             layer = self.layer_list[i]
             layer.update()
 
-    def train(self, dataReader, checkpoint=0.1, need_test=True):
+    def train(self, dataReader, checkpoint=0.1, need_test=True, file_name=""):
         t0 = time.time()
         self.loss_func = LossFunction(self.hp.net_type)
         if self.hp.regular_name == RegularMethod.EarlyStop:
@@ -100,17 +104,16 @@ class NeuralNet(object):
                       f"backward time: {time3 - time2}, update time: {time4 - time3},total time: {time4 - time1}")
 
                 total_iteration = epoch * max_iteration + iteration
-
                 if (total_iteration + 1) % checkpoint_iteration == 0:
+                    if batch_x.shape[0] < self.hp.batch_size:
+                        batch_x, batch_y = dataReader.GetBatchTrainSamples(self.hp.batch_size, iteration-1)
                     self.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
-                    self.SaveLossHistory(valid_count)
+                    self.SaveLossHistory(valid_count,name=file_name)
                     valid_count = valid_count + 1
                     if need_stop:
                         break
 
             self.save_parameters()
-
-
             if need_stop:
                 break
             # end if
@@ -125,9 +128,16 @@ class NeuralNet(object):
             print(self.accuracy)
 
     def distributed_train(self, batch_x, batch_y):
+        time1 = time.time()
         self.__forward(batch_x, train=True)
+        time2 = time.time()
         self.__backward(batch_x, batch_y)
+        time3 = time.time()
         self.__update()
+        time4 = time.time()
+        print(f"forward time: {time2 - time1}, "
+              f"backward time: {time3 - time2}, update time: {time4 - time3},total time: {time4 - time1}")
+
         params = self.distributed_save_parameters()
         return params
 
@@ -229,12 +239,12 @@ class NeuralNet(object):
         title = str.format("{0},accuracy={1:.4f}", self.hp.toString(), self.accuracy)
         self.loss_trace.ShowLossHistory(title, xcoor, xmin, xmax, ymin, ymax)
 
-    def SaveLossHistory(self,valid_count):
+    def SaveLossHistory(self,valid_count,name="loss_data"):
         # path = self.subfolder
 
         name_attribute = ['epoch', 'iteration', 'training_loss', 'training_accuracy', 'validating_loss',
                           'validating_accuracy']
-        csvFile = open('history_data.csv', "w+", newline='')
+        csvFile = open(name, "a+", newline='')
         try:
             writer = csv.writer(csvFile)
             if valid_count == 0:

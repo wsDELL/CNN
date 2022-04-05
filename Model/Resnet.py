@@ -19,8 +19,8 @@ class BasicBlock(MiniFramework.NeuralNet):
         super().__init__(param, layer_name)
 
         self.add_layer(conv3x3(in_planes, planes, param=param, stride=stride), layer_name + "_con1")
-        self.add_layer(MiniFramework.BatchNormalLayer(planes), layer_name + "_bn1")
-        self.add_layer(MiniFramework.ActivationLayer(ReLU()), layer_name + "_relu1")
+        self.add_layer(BatchNormalLayer(planes), layer_name + "_bn1")
+        self.add_layer(ReLU(), layer_name + "_relu1")
         self.add_layer(conv3x3(in_planes, planes, param=param), layer_name + "_con2")
         self.add_layer(BatchNormalLayer(planes), layer_name + "_bn2")
         self.downsample = downsample
@@ -30,7 +30,7 @@ class BasicBlock(MiniFramework.NeuralNet):
                 self.add_layer(downsample[name], layer_name + "_" + name)
         else:
             self.downsample_status = False
-        self.add_layer(ActivationLayer(ReLU()), layer_name + "_relu2")
+        self.add_layer(ReLU(), layer_name + "_relu2")
         self.stride = stride
 
     def forward(self, input_v, train=True):
