@@ -14,6 +14,9 @@ class DropoutLayer(layer):
         self.name = None
 
     def forward(self, input_v: np.ndarray, train=True):
+        if not train:
+            self.output_v = input_v
+            return self.output_v
         assert (input_v.ndim == 2 or input_v.ndim == 4)
         self.input_size = input_v
         self.output_size = input_v

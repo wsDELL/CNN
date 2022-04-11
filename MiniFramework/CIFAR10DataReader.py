@@ -24,6 +24,7 @@ class CIFAR10DataReader(object):
         self.YTestRaw = y_test  # test label set before normalization
         self.XDev = None  # validation feature set
         self.YDev = None  # validation lable set
+        self.order = None
 
     def ReadData(self):
         self.XTrainRaw = self.XTrainRaw.astype('float32')
@@ -165,7 +166,7 @@ class CIFAR10DataReader(object):
         random.seed(seed)
         order = [i for i in range(len(self.XTrain))]
         random.shuffle(order)
-        return order
+        self.order = order
 
     def reorder(self,new_order):
         XP = self.XTrain[new_order,:,:,:]

@@ -56,11 +56,6 @@ class NeuralNet(object):
             delta_out = layer.backward(delta_in, i)
             delta_in = delta_out
 
-    # def __pre_update(self):
-    #     for i in range(self.layer_count - 1, -1, -1):
-    #         layer = self.layer_list[i]
-    #         layer.pre_update()
-
     def __update(self):
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
@@ -145,7 +140,7 @@ class NeuralNet(object):
         print("epoch=%d, total_iteration=%d" % (epoch, total_iteration))
 
         # l1/l2 cost
-        regular_cost = self.__get_regular_cost_from_fc_layer(self.hp.regular_name)
+        regular_cost = self.__get_regular_cost(self.hp.regular_name)
 
         # calculate train loss
         self.__forward(train_x, train=False)
@@ -168,7 +163,7 @@ class NeuralNet(object):
                 need_stop = True
         return need_stop
 
-    def __get_regular_cost_from_fc_layer(self, regularName):
+    def __get_regular_cost(self, regularName):
         if regularName != RegularMethod.L1 and regularName != RegularMethod.L2:
             return 0
 

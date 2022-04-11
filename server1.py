@@ -44,10 +44,10 @@ def LoadData():
     mdr = CIFAR10DataReader(train_x, train_y, test_x, test_y)
     # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
     mdr.ReadData()
+    mdr.data_Shuffle()
+    mdr.GenerateValidationSet(k=12)
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
-    mdr.Shuffle()
-    mdr.GenerateValidationSet(k=12)
     return mdr
 
 
@@ -199,33 +199,34 @@ def model1():
     return net
 
 
-def Alexnet():
+def dis_Alexnet():
     num_output = 10
-    max_epoch = 20
+    max_epoch = 40
     batch_size = 128
     learning_rate = 0.01
-    params = HyperParameters(learning_rate, max_epoch, batch_size,
-                             net_type=NetType.MultipleClassifier,
-                             init_method=InitialMethod.Xavier_Uniform,
-                             optimizer_name=OptimizerName.Adam)
+    params = HyperParameters(
+        learning_rate, max_epoch, batch_size,
+        net_type=NetType.MultipleClassifier,
+        init_method=InitialMethod.Kaiming_Normal,
+        optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
 
-    net = NeuralNet(params, "alexnet")
+    net = NeuralNet(params, "dis_alexnet")
 
-    c1 = ConLayer(3, 64, kernel_size=3, hp=params, stride=2,padding=1)
+    c1 = ConLayer(3, 64, kernel_size=3, hp=params, stride=2, padding=1)
     net.add_layer(c1, "c1")
     r1 = ReLU()
     net.add_layer(r1, "relu1")
-    p1 = PoolingLayer(kernel_size=2,stride=2, pooling_type=PoolingTypes.MAX)
+    p1 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p1, "p1")
 
-    c2 = ConLayer(64, 192, kernel_size=3, hp=params, stride=1,padding=1)
+    c2 = ConLayer(64, 192, kernel_size=3, hp=params, stride=1, padding=1)
     net.add_layer(c2, "c2")
     r2 = ReLU()
     net.add_layer(r2, "relu2")
-    p2 = PoolingLayer(kernel_size=2,stride=2, pooling_type=PoolingTypes.MAX)
+    p2 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p2, "p2")
 
-    c3 = ConLayer(192, 384, kernel_size=3, hp=params, stride=1,padding=1)
+    c3 = ConLayer(192, 384, kernel_size=3, hp=params, stride=1, padding=1)
     net.add_layer(c3, "c3")
     r3 = ReLU()
     net.add_layer(r3, "relu3")
@@ -239,28 +240,26 @@ def Alexnet():
     net.add_layer(c5, "c5")
     r5 = ReLU()
     net.add_layer(r5, "relu5")
-    p5 = PoolingLayer(kernel_size=2,stride=2, pooling_type=PoolingTypes.MEAN)
-    net.add_layer(p5, "p3")
+    p5 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MEAN)
+    net.add_layer(p5, "p5")
 
-
-    # d1 = DropoutLayer()
-    # net.add_layer(d1, 'd1')
+    d1 = DropoutLayer(ratio=0.3)
+    net.add_layer(d1, 'd1')
     f1 = FCLayer(256 * 2 * 2, 1024, params)
     net.add_layer(f1, "f1")
     bn1 = BatchNormalLayer(f1.output_num)
     net.add_layer(bn1, 'bn1')
-    # r6 = ReLU()
-    # net.add_layer(r6, "relu6")
+    r6 = ReLU()
+    net.add_layer(r6, "relu6")
 
-    # d2 = DropoutLayer()
-    # net.add_layer(d2, "d2")
-
+    d2 = DropoutLayer(ratio=0.3)
+    net.add_layer(d2, "d2")
     f2 = FCLayer(1024, 1024, params)
     net.add_layer(f2, "f2")
     bn2 = BatchNormalLayer(f2.output_num)
-    net.add_layer(bn2, 'bn1')
-    # r6 = ReLU()
-    # net.add_layer(r6, "relu6")
+    net.add_layer(bn2, 'bn2')
+    r6 = ReLU()
+    net.add_layer(r6, "relu6")
 
     f3 = FCLayer(f2.output_num, 10, params)
     net.add_layer(f3, "f3")
@@ -268,8 +267,16 @@ def Alexnet():
     net.add_layer(s4, "s4")
 
     return net
+
+
 task_queue = Queue()
 result_queue = Queue()
+order_queue = Queue()
+
+
+def return_order_queue():
+    global order_queue
+    return order_queue
 
 
 def return_task_queue():
@@ -296,11 +303,11 @@ if __name__ == '__main__':
         learning_rate, max_epoch, batch_size,
         net_type=NetType.MultipleClassifier,
         init_method=InitialMethod.Kaiming_Uniform,
-        optimizer_name=OptimizerName.Adam,regular_name=RegularMethod.L2, regular_value=0.0005)
+        optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
     lock = multiprocessing.Lock()
     dataReader = LoadData()
     # net = model()
-    net = Alexnet()
+    net = dis_Alexnet()
     # net = VGG(param=params, vgg_name="VGG11")
     param = net.distributed_save_parameters()
     net.loss_func = LossFunction(net.hp.net_type)
@@ -317,20 +324,26 @@ if __name__ == '__main__':
     need_stop = False
     QueueManager.register('get_task_queue', callable=return_task_queue)
     QueueManager.register('get_result_queue', callable=return_result_queue)
-    QueueManager.register('')
-    manager = QueueManager(address=('10.10.15.8', 5006), authkey=b'abc')
+    # QueueManager.register('dict', dict, DictProxy)
+    QueueManager.register('get_order_queue', callable=return_order_queue)
+    manager = QueueManager(address=('131.181.249.163', 5006), authkey=b'abc')
     manager.start()
+
     # s = manager.get_server()
     # s.serve_forever()
-
+    order = manager.get_order_queue()
     task = manager.get_task_queue()
     result = manager.get_result_queue()
     result1 = []
     num_worker = 2
     total_iteration_count = 0
+    valid_count = 0
     for epoch in range(net.hp.max_epoch):
         print(f"epoch {epoch} start")
-        dataReader.Shuffle()
+        # dataReader.Shuffle()
+        data_order = dataReader.data_Shuffle()
+        for i in range(num_worker):
+            order.put(data_order)
         iteration_count = 0
         while True:
             print('put task %d' % iteration_count)
@@ -345,7 +358,10 @@ if __name__ == '__main__':
                     if len(result1) == num_worker:
                         break
                 for i in range(len(result1)):
-                    net.distributed_load_parameters(result1[i])
+                    if i == 0:
+                        net.distributed_load_parameters(result1[i])
+                    else:
+                        net.distributed_add_parameters(result1[i])
                 net.distributed_average_parameters(num_worker)
                 param = net.distributed_save_parameters()
                 lock.release()
@@ -353,6 +369,10 @@ if __name__ == '__main__':
             total_iteration_count += 1
             if iteration_count % checkpoint_iteration == 0:
                 batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration_count)
+                if batch_x.shape[0] < net.hp.batch_size:
+                    batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration_count - 1)
+                    net.SaveLossHistory(valid_count, name="dis_alexnet.csv")
+                    valid_count += 1
                 need_stop = net.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration_count)
                 if need_stop:
                     break
@@ -360,6 +380,7 @@ if __name__ == '__main__':
                 break
             # name = list(ret.keys())[0]
             # print(name)
+        net.save_parameters()
     print("testing...")
     accuracy = net.Test(dataReader)
     print(accuracy)

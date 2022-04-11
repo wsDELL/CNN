@@ -33,17 +33,6 @@ class ActivationLayer(layer):
         pass
 
 
-# class Activation_function(object):
-#     def __init__(self):
-#         pass
-#
-#     def forward(self, z):
-#         pass
-#
-#     def backward(self, z, a, delta):
-#         pass
-
-
 class Identity(ActivationLayer):
     def _forward(self, z):
         return z
