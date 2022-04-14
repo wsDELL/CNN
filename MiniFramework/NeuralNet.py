@@ -28,7 +28,7 @@ class NeuralNet(object):
 
     def add_layers(self, layers: list, name):
         for layer in layers:
-            # layer.initialize(self.subfolder, name)
+            # layer.initialize(self.subfolder, iteration_count)
             self.layer_list.append(layer)
             self.layer_count += 1
 

@@ -101,14 +101,14 @@ class BatchNormalLayer(layer):
         return params
 
     def distributed_load_parameters(self, param):
-        # name = list(param.keys())
+        # iteration_count = list(param.keys())
         self.gamma = param[self.name]['gamma']
         self.beta = param[self.name]['beta']
         self.running_mean = param[self.name]['mean']
         self.running_variance = param[self.name]['variance']
 
     def distributed_add_parameters(self, param):
-        # name = list(param.keys())
+        # iteration_count = list(param.keys())
         self.gamma = self.gamma + param[self.name]['gamma']
         self.beta = self.beta + param[self.name]['beta']
         self.running_mean = self.running_mean + param[self.name]['mean']

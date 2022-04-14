@@ -307,8 +307,8 @@ if __name__ == '__main__':
             if max_iteration - total_iteration_count < n:
                 total_iteration_count = 0
                 break
-            # name = list(ret.keys())[0]
-            # print(name)
+            # iteration_count = list(ret.keys())[0]
+            # print(iteration_count)
     print("testing...")
     accuracy = net.Test(dataReader)
     print(accuracy)

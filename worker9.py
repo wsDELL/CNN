@@ -57,7 +57,7 @@ def return_order_queue():
 
 if __name__ == "__main__":
     datareader = LoadData()
-    datareader.data_Shuffle()
+    datareader.server_Shuffle()
     queuemanager.register("send_order")
     manager = queuemanager(address=("131.181.249.163", 10004), authkey=b"abc")
     manager.connect()

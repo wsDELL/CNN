@@ -3,7 +3,6 @@ from multiprocessing import Queue
 from multiprocessing.managers import BaseManager
 
 from Model.vgg import *
-from Model.alexnet import *
 
 train_x = "./data/MNIST/raw/train-images-idx3-ubyte"
 train_y = "./data/MNIST/raw/train-labels-idx1-ubyte"
@@ -100,32 +99,6 @@ def model():
     net.add_layer(f4, "f2")
     s4 = Softmax()
     net.add_layer(s4, "s4")
-
-    # c1 = ConLayer((1, 28, 28), (8, 3, 3), params, stride=1, padding=0)
-    # net.add_layer(c1, "c1")
-    # r1 = ActivationLayer(ReLU())
-    # net.add_layer(r1, "relu1")
-    # p1 = PoolingLayer(c1.output_shape, (2, 2), 2, PoolingTypes.MAX)
-    # net.add_layer(p1, "p1")
-    #
-    # c2 = ConLayer(p1.output_shape, (16, 3, 3), params, stride=1, pad=0)
-    # net.add_layer(c2, "c2")
-    # r2 = ActivationLayer(ReLU())
-    # net.add_layer(r2, "relu2")
-    # p2 = PoolingLayer(c2.output_shape, (2, 2), 2, PoolingTypes.MAX)
-    # net.add_layer(p2, "p2")
-    #
-    # f3 = FCLayer(p2.output_size, 32, params)
-    # net.add_layer(f3, "f3")
-    # bn3 = BatchNormalLayer(f3.output_num)
-    # net.add_layer(bn3, "bn3")
-    # r3 = ActivationLayer(ReLU())
-    # net.add_layer(r3, "relu3")
-    #
-    # f4 = FCLayer(f3.output_num, 10, params)
-    # net.add_layer(f4, "f2")
-    # s4 = ClassificationLayer(Softmax())
-    # net.add_layer(s4, "s4")
 
     return net
 
@@ -314,8 +287,8 @@ if __name__ == '__main__':
     lock = multiprocessing.Lock()
     dataReader = LoadData()
     # net = model()
-    # net = AlexNet(param=params, model_name="dis_Alexnet")
-    net = VGG(param=params, vgg_name="VGG11")
+    net = dis_Alexnet()
+    # net = VGG(param=params, vgg_name="VGG11")
     param = net.distributed_save_parameters()
     net.loss_func = LossFunction(net.hp.net_type)
     if net.hp.regular_name == RegularMethod.EarlyStop:
@@ -331,10 +304,9 @@ if __name__ == '__main__':
     need_stop = False
     QueueManager.register('get_task_queue', callable=return_task_queue)
     QueueManager.register('get_result_queue', callable=return_result_queue)
-    # QueueManager.register('dict', dict, DictProxy)
     QueueManager.register('send_order_queue', callable=return_send_order_queue)
     QueueManager.register('rece_order_queue', callable=return_rece_order_queue)
-    manager = QueueManager(address=('131.181.249.163', 5006), authkey=b'abc')
+    manager = QueueManager(address=('10.10.15.7', 5006), authkey=b'abc')
     manager.start()
 
     order = manager.send_order_queue()
@@ -354,6 +326,7 @@ if __name__ == '__main__':
             break
     for epoch in range(net.hp.max_epoch):
         print(f"epoch {epoch} start")
+        # dataReader.Shuffle()
         dataReader.Shuffle()
         iteration_count = 0
         while True:
@@ -382,9 +355,9 @@ if __name__ == '__main__':
                 batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration_count)
                 if batch_x.shape[0] < net.hp.batch_size:
                     batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration_count - 1)
+                    net.SaveLossHistory(valid_count, name="dis_alexnet.csv")
+                    valid_count += 1
                 need_stop = net.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration_count)
-                net.SaveLossHistory(valid_count, name="dis_vgg11.csv")
-                valid_count += 1
                 if need_stop:
                     break
             if iteration_count == max_iteration:

@@ -14,11 +14,11 @@ class VGG(NeuralNet):
         super().__init__(param, vgg_name)
         self._make_layers(cfg[vgg_name])
         self.add_layer(DropoutLayer(), name="Drop1")
-        # self.add_layer(FCLayer(512, 512, param), name="fc1")
-        # self.add_layer(ReLU(), name="Relu_1")
-        # self.add_layer(DropoutLayer(), name="Drop2")
-        # self.add_layer(FCLayer(512, 512, param), name="fc2")
-        # self.add_layer(ReLU(), name="Relu_2")
+        # self.add_layer(FCLayer(512, 512, param), iteration_count="fc1")
+        # self.add_layer(ReLU(), iteration_count="Relu_1")
+        # self.add_layer(DropoutLayer(), iteration_count="Drop2")
+        # self.add_layer(FCLayer(512, 512, param), iteration_count="fc2")
+        # self.add_layer(ReLU(), iteration_count="Relu_2")
         self.add_layer(FCLayer(512, 10, param), name="fc3")
         self.add_layer(Softmax(), name="softmax")
 
@@ -36,7 +36,7 @@ class VGG(NeuralNet):
                 self.add_layer(ReLU(), name=f"relu{con_count}")
                 con_count = con_count + 1
                 in_channels = x
-        # self.add_layer(PoolingLayer(kernel_size=1, stride=1, pooling_type=PoolingType.MEAN), name=f"AvgPool")
+        # self.add_layer(PoolingLayer(kernel_size=1, stride=1, pooling_type=PoolingType.MEAN), iteration_count=f"AvgPool")
 
     def forward(self, input_v, train=True):
         output = None
@@ -64,17 +64,3 @@ class VGG(NeuralNet):
             layer = self.layer_list[i]
             layer.update()
 
-
-if __name__ == "__main__":
-    max_epoch = 20
-    batch_size = 128
-    learning_rate = 0.1
-    params = HyperParameters(learning_rate, max_epoch, batch_size,
-                             net_type=NetType.MultipleClassifier,
-                             init_method=InitialMethod.Xavier,
-                             optimizer_name=OptimizerName.SGD)
-    net = VGG(param=params, vgg_name="VGG11")
-    x = np.random.rand(2, 3, 32, 32)
-    y = net.forward(x)
-    z = net.backward()
-    print(y.size())

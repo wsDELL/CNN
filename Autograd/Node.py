@@ -30,4 +30,4 @@ class Node(np.ndarray):
         return self.__str__()
 
     def __str__(self):
-        return f"Node{self.id}: {self.input2value()} {self.op.name()} = {self.value}, grad: {self.grad}"
+        return f"Node{self.id}: {self.input2value()} {self.op.iteration_count()} = {self.value}, grad: {self.grad}"

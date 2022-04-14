@@ -36,7 +36,7 @@ class BasicBlock(MiniFramework.NeuralNet):
     def forward(self, input_v, train=True):
         output = None
         residual = input_v
-        layer_name: str = self.layer_list[0].name
+        layer_name: str = self.layer_list[0].iteration_count
         if self.downsample_status is True:
             for i in range(self.layer_count):
                 if layer_name[-15:] == "_downsample_con":
@@ -75,7 +75,7 @@ class ResNet(MiniFramework.NeuralNet):
         self.add_layer(ConLayer(32, 64, 3, stride=1, padding=1, hp=params), name="con1")
         self.add_layer(BatchNormalLayer(64), name='bn1')
         self.add_layer(ActivationLayer(ReLU()), name='relu1')
-        # self.add_layer(PoolingLayer(kernel_size=3, stride=3, padding=1),name='pool')
+        # self.add_layer(PoolingLayer(kernel_size=3, stride=3, padding=1),iteration_count='pool')
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1, layer_name="block1")
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2, layer_name="block2")
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2, layer_name="block3")
