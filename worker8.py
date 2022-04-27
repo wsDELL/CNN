@@ -53,7 +53,7 @@ def LoadData():
     mdr.ReadData()
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
-    mdr.Shuffle()
+    mdr.training_Shuffle()
     mdr.GenerateValidationSet(k=12)
     return mdr
 
@@ -72,11 +72,8 @@ def model():
     max_epoch = 5
     batch_size = 128
     learning_rate = 0.1
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier,
-        optimizer_name=OptimizerName.Momentum)
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
+                             optimizer_name=OptimizerName.Momentum)
 
     net = NeuralNet(params, "mnist_cnn")
 
@@ -141,9 +138,7 @@ def model1():
     max_epoch = 20
     batch_size = 128
     learning_rate = 0.1
-    params = HyperParameters(learning_rate, max_epoch, batch_size,
-                             net_type=NetType.MultipleClassifier,
-                             init_method=InitialMethod.Xavier,
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
                              optimizer_name=OptimizerName.SGD)
 
     net = NeuralNet(params,"alexnet")
@@ -213,11 +208,8 @@ if __name__ == '__main__':
     max_epoch = 5
     batch_size = 128
     learning_rate = 0.01
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier,
-        optimizer_name=OptimizerName.Adam)
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
+                             optimizer_name=OptimizerName.Adam)
     net = VGG(param=params,vgg_name="VGG11")
     server_address = '131.181.249.163'
     print('connect to server %s...' % server_address)

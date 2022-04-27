@@ -4,6 +4,7 @@ from multiprocessing.managers import BaseManager
 from multiprocessing import Queue, Array
 
 from MiniFramework import *
+from Model.alexnet import AlexNet
 from Model.vgg import *
 
 train_x = "./data/MNIST/raw/train-images-idx3-ubyte"
@@ -16,9 +17,10 @@ class QueueManager(BaseManager):
 
 
 QueueManager.register('get_task_queue')
-QueueManager.register('get_result_queue')
+QueueManager.register('get_gradient_queue')
 QueueManager.register('send_order_queue')
-QueueManager.register('rece_order_queue')
+QueueManager.register('send_training_order_queue')
+
 
 cifar_name = ["data_batch_1","data_batch_2","data_batch_3","data_batch_4","data_batch_5"]
 
@@ -40,7 +42,7 @@ def load_CIFAR_batch(filename):
         Y = np.array(Y)
         return X, Y
 
-def LoadData(order):
+def LoadData():
     for i in range(len(cifar_name)):
         if i == 0:
             train_x,train_y=load_CIFAR_batch(filename=f"./data/cifar-10-batches-py/{cifar_name[i]}")
@@ -52,11 +54,6 @@ def LoadData(order):
 
     mdr = CIFAR10DataReader(train_x, train_y, test_x, test_y)
     # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
-    mdr.ReadData()
-    mdr.reorder(order)
-    mdr.GenerateValidationSet(k=12)
-    mdr.NormalizeX()
-    mdr.NormalizeY(NetType.MultipleClassifier, base=0)
     return mdr
 
 def LoadData1():
@@ -73,11 +70,8 @@ def dis_Alexnet():
     max_epoch = 40
     batch_size = 128
     learning_rate = 0.01
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Kaiming_Normal,
-        optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
+                             optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
 
     net = NeuralNet(params, "dis_alexnet")
 
@@ -141,16 +135,14 @@ def dis_Alexnet():
 if __name__ == '__main__':
     # dataReader = LoadData()
     num_output = 10
-    max_epoch = 75
+    max_epoch = 50
     batch_size = 128
     learning_rate = 0.01
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Kaiming_Uniform,
-        optimizer_name=OptimizerName.Adam,regular_name=RegularMethod.L2, regular_value=0.0005)
-    net = VGG(param=params,vgg_name="VGG11")
-    # net =dis_Alexnet()
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
+                             optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
+    # net = VGG(param=params,vgg_name="VGG11")
+    net = AlexNet(param=params, model_name="dis_Alexnet")
+
     server_address = '131.181.249.163'
     print('connect to server %s...' % server_address)
 
@@ -163,15 +155,18 @@ if __name__ == '__main__':
             print("no connection")
             time.sleep(5)
 
-    order = manager.send_order_queue()
-    order_status = manager.rece_order_queue()
+    total_order = manager.send_order_queue()
+    training_order = manager.send_training_order_queue()
     task = manager.get_task_queue()
-    result = manager.get_result_queue()
-
-    if not order.empty():
-        data_order = order.get()
-        order_status.put(True)
-        dataReader = LoadData(data_order)
+    result = manager.get_gradient_queue()
+    dataReader = LoadData()
+    if not total_order.empty():
+        data_order = total_order.get()
+        dataReader.ReadData()
+        dataReader.total_reorder(data_order)
+        dataReader.GenerateValidationSet(k=12)
+        dataReader.NormalizeX()
+        dataReader.NormalizeY(NetType.MultipleClassifier, base=0)
     while True:
         count = 0
         if task.empty():
@@ -179,15 +174,17 @@ if __name__ == '__main__':
             # count = count + 1
             # if count > 500:
             #     break
+        if not training_order.empty():
+            data_order = training_order.get()
+            dataReader.training_reorder(data_order)
+            print("Shuffle finish")
         iteration = task.get()
         iteration_count = list(iteration.keys())[0]
-        if iteration_count == 0 or 1:
-            dataReader.Shuffle()
         net.distributed_load_parameters(iteration)
         batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration_count)
         print(f'worker get {iteration_count}')
-        param = net.distributed_train(batch_x,batch_y)
-        iteration[iteration_count] = param
+        grad = net.distributed_train(batch_x,batch_y)
+        iteration[iteration_count] = grad
         result.put(iteration)
 
     print('worker exit')

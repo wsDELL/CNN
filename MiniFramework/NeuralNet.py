@@ -48,9 +48,8 @@ class NeuralNet(object):
         output = self.__forward(input_v, train=False)
         return output
 
-    def __backward(self, X, Y):
+    def __backward(self, Y):
         delta_in = self.output_v - Y
-        # delta_in = CrossEntropyLoss(self.output_v,Y)
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
             delta_out = layer.backward(delta_in, i)
@@ -77,7 +76,7 @@ class NeuralNet(object):
         need_stop = False
         valid_count = 0
         for epoch in range(self.hp.max_epoch):
-            dataReader.Shuffle()
+            dataReader.training_Shuffle()
             for iteration in range(max_iteration):
                 # get x and y value for one sample
                 batch_x, batch_y = dataReader.GetBatchTrainSamples(self.hp.batch_size, iteration)
@@ -90,7 +89,7 @@ class NeuralNet(object):
                 self.__forward(batch_x, train=True)
                 time2 = time.time()
                 # calculate gradient of w and b
-                self.__backward(batch_x, batch_y)
+                self.__backward(batch_y)
                 time3 = time.time()
                 # final update w,b
                 self.__update()
@@ -126,15 +125,15 @@ class NeuralNet(object):
         time1 = time.time()
         self.__forward(batch_x, train=True)
         time2 = time.time()
-        self.__backward(batch_x, batch_y)
+        self.__backward(batch_y)
         time3 = time.time()
-        self.__update()
-        time4 = time.time()
+        # self.__update()
+        # time4 = time.time()
         print(f"forward time: {time2 - time1}, "
-              f"backward time: {time3 - time2}, update time: {time4 - time3},total time: {time4 - time1}")
+              f"backward time: {time3 - time2}, total time: {time3 - time1}")
 
-        params = self.distributed_save_parameters()
-        return params
+        grad = self.distributed_save_gradient()
+        return grad
 
     def CheckErrorAndLoss(self, dataReader, train_x, train_y, epoch, total_iteration):
         print("epoch=%d, total_iteration=%d" % (epoch, total_iteration))
@@ -170,7 +169,7 @@ class NeuralNet(object):
         regular_cost = 0
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
-            if isinstance(layer,MiniFramework.FCLayer) or isinstance(layer, MiniFramework.ConLayer):
+            if isinstance(layer,MiniFramework.FCLayer) or isinstance(layer,MiniFramework.ConLayer):
                 if regularName == RegularMethod.L1:
                     regular_cost += np.sum(np.abs(layer.WB.W))
                 elif regularName == RegularMethod.L2:
@@ -203,6 +202,17 @@ class NeuralNet(object):
                 pass
         return params
 
+    def distributed_save_gradient(self):
+        print("save gradient")
+        grad = {}
+        for i in range(self.layer_count):
+            layer = self.layer_list[i]
+            try:
+                grad.update(layer.distributed_save_gradient())
+            except TypeError:
+                pass
+        return grad
+
     # load weights for the most low loss moment
     def load_parameters(self):
         print("load parameters")
@@ -217,18 +227,25 @@ class NeuralNet(object):
             layer = self.layer_list[i]
             layer.distributed_load_parameters(param[name])
 
-    def distributed_add_parameters(self, param):
-        print("add parameters")
-        name = list(param.keys())[0]
+    def distributed_load_gradient(self,grad):
+        print("load gradient")
+        name = list(grad.keys())[0]
         for i in range(self.layer_count):
             layer = self.layer_list[i]
-            layer.distributed_add_parameters(param[name])
+            layer.distributed_load_gradient(grad[name])
 
-    def distributed_average_parameters(self, num):
+    def distributed_add_gradient(self, grad):
+        print("add parameters")
+        name = list(grad.keys())[0]
+        for i in range(self.layer_count):
+            layer = self.layer_list[i]
+            layer.distributed_add_gradient(grad[name])
+
+    def distributed_average_gradient(self, num):
         print("average parameters")
         for i in range(self.layer_count):
             layer = self.layer_list[i]
-            layer.distributed_average_parameters(num)
+            layer.distributed_average_gradient(num)
 
     def ShowLossHistory(self, xcoor, xmin=None, xmax=None, ymin=None, ymax=None):
         title = str.format("{0},accuracy={1:.4f}", self.hp.toString(), self.accuracy)

@@ -3,6 +3,7 @@ from MiniFramework.Enums import *
 from MiniFramework.WeightBias import *
 from MiniFramework.Optimizer import *
 
+
 def calculate_gain(nonlinearity, param=None):
     linear_fns = ['linear', 'conv1d', 'conv2d', 'conv3d', 'conv_transpose1d', 'conv_transpose2d',
                   'conv_transpose3d']
@@ -25,8 +26,10 @@ def calculate_gain(nonlinearity, param=None):
     else:
         raise ValueError("Unsupported nonlinearity {}".format(nonlinearity))
 
+
 class ConWeightBias(WeightsBias):
-    def __init__(self, input_c, output_c, filter_w, filter_h, init_method, optimizer_name, eta):
+    def __init__(self, input_c, output_c, filter_w, filter_h, optimizer_name, eta,
+                 init_method=InitialMethod.Kaiming_Normal):
         self.FilterCount = output_c
         self.KernalCount = input_c
         self.KernalHeight = filter_h
@@ -36,7 +39,6 @@ class ConWeightBias(WeightsBias):
         self.lr = eta
         self.name = None
         self.WBShape = (self.FilterCount, self.KernalCount, self.KernalHeight, self.KernalWidth)
-
 
     def initialize(self, folder, name, create_new):
         self.init_file_name = f"{folder}/{name}_{self.FilterCount}_" \
@@ -53,9 +55,8 @@ class ConWeightBias(WeightsBias):
         self.dB = np.zeros(self.B.shape).astype('float32')
 
     def CreateNew(self):
-        self.W = ConWeightBias.InitialConvParameters(self.WBShape,self.init_method)
+        self.W = ConWeightBias.InitialConvParameters(self.WBShape, self.init_method)
         self.B = np.zeros((self.FilterCount, 1)).astype('float32')
-
 
     def Rotate180(self):
         self.WT = np.zeros(self.W.shape).astype(np.float32)
@@ -72,40 +73,35 @@ class ConWeightBias(WeightsBias):
         self.dW = self.dW / m
         self.dB = self.dB / m
 
-
     @staticmethod
-    def InitialConvParameters(shape, init_method, nonlinearity='conv2d'):
+    def InitialConvParameters(shape, init_method=InitialMethod.Kaiming_Normal, nonlinearity='conv2d'):
         assert (len(shape) == 4)
         num_input = shape[1]
         num_output = shape[0]
 
         if init_method == InitialMethod.Zero:
-            W = np.zeros(shape).astype('float32')
+            Weight = np.zeros(shape).astype('float32')
         elif init_method == InitialMethod.Uniform:
-            W = np.random.uniform(shape).astype('float32')
+            Weight = np.random.uniform(shape).astype('float32')
         elif init_method == InitialMethod.Normal:
-            W = np.random.normal(shape).astype('float32')
+            Weight = np.random.normal(shape).astype('float32')
         elif init_method == InitialMethod.MSRA:
-            W = np.random.normal(0, np.sqrt(2 / num_input * num_output), shape).astype('float32')
+            Weight = np.random.normal(0, np.sqrt(2 / num_input * num_output), shape).astype('float32')
         elif init_method == InitialMethod.Xavier_Uniform:
             gain = calculate_gain(nonlinearity)
             t = gain * math.sqrt(6.0 / float(num_output + num_input))
-            W = np.random.uniform(-t, t, shape).astype('float32')
+            Weight = np.random.uniform(-t, t, shape).astype('float32')
         elif init_method == InitialMethod.Xavier_Normal:
             gain = calculate_gain(nonlinearity)
             t = gain * math.sqrt(2.0 / float(num_output + num_input))
-            W = np.random.normal(0., t, shape).astype('float32')
+            Weight = np.random.normal(0., t, shape).astype('float32')
         elif init_method == InitialMethod.Kaiming_Uniform:
             gain = calculate_gain(nonlinearity)
             std = gain / math.sqrt(num_input)
             bound = math.sqrt(3.0) * std
-            W = np.random.uniform(-bound, bound, shape).astype('float32')
+            Weight = np.random.uniform(-bound, bound, shape).astype('float32')
         elif init_method == InitialMethod.Kaiming_Normal:
             gain = calculate_gain(nonlinearity)
             std = gain / math.sqrt(num_input)
-            W = np.random.normal(0, std, shape).astype('float32')
-        return W
-
-
-
-
+            Weight = np.random.normal(0, std, shape).astype('float32')
+        return Weight

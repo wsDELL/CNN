@@ -38,7 +38,7 @@ def LoadData():
     mdr.ReadData()
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
-    mdr.Shuffle()
+    mdr.training_Shuffle()
     # mdr.distributed_Shuffle()
     mdr.GenerateValidationSet(k=12)
     return mdr
@@ -46,14 +46,14 @@ def LoadData():
 class queuemanager(managers.BaseManager):
     pass
 
-order_queue = Queue()
+total_order_queue = Queue()
 def return_order_queue():
-    global order_queue
+    global total_order_queue
     return order_queue
 
 if __name__ == "__main__":
     datareader = LoadData()
-    new_order = datareader.server_Shuffle()
+    new_order = datareader.total_Shuffle()
     queuemanager.register("send_order", callable=return_order_queue)
     manager = queuemanager(address=("131.181.249.163", 10004), authkey=b"abc")
     manager.start()

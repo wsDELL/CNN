@@ -25,6 +25,7 @@ class CIFAR10DataReader(object):
         self.XDev = None  # validation feature set
         self.YDev = None  # validation lable set
         self.order = None
+        self.training_data_order = None
 
     def ReadData(self):
         self.XTrainRaw = self.XTrainRaw.astype('float32')
@@ -152,7 +153,7 @@ class CIFAR10DataReader(object):
 
     # permutation only affect along the first axis, so we need transpose the array first
     # see the comment of this class to understand the data format
-    def Shuffle(self):
+    def training_Shuffle(self):
         seed = np.random.randint(0, 100)
         np.random.seed(seed)
         order = np.random.permutation(len(self.XTrain))
@@ -160,15 +161,22 @@ class CIFAR10DataReader(object):
         YP = self.YTrain[order, :]
         self.XTrain = XP
         self.YTrain = YP
+        self.training_data_order = order
 
-    def server_Shuffle(self):
+    def total_Shuffle(self):
         seed = random.randint(0, 100)
         random.seed(seed)
         order = [i for i in range(len(self.XTrainRaw))]
         random.shuffle(order)
         self.order = order
 
-    def reorder(self,new_order):
+    def training_reorder(self, new_order):
+        XP = self.XTrain[new_order,:,:,:]
+        YP = self.YTrain[new_order,:]
+        self.XTrain = XP
+        self.YTrain = YP
+
+    def total_reorder(self,new_order):
         XP = self.XTrainRaw[new_order,:,:,:]
         YP = self.YTrainRaw[new_order,:]
         self.XTrain = XP

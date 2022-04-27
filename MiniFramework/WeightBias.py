@@ -33,14 +33,14 @@ def calculate_gain(nonlinearity, param=None):
 
 class WeightsBias(object):
 
-    def __init__(self, n_input, n_output, init_method, optimizer_name, eta):
+    def __init__(self, n_input, n_output, optimizer_name, lr,init_method=InitialMethod.Normal):
         self.result_file_name = None
         self.init_file_name = None
         self.num_input = n_input
         self.num_output = n_output
         self.init_method = init_method
         self.optimizer_name = optimizer_name
-        self.lr = eta
+        self.lr = lr
         self.W = None
         self.B = None
         self.oB = None
@@ -60,7 +60,8 @@ class WeightsBias(object):
             self.LoadExistingParameter()
 
     def CreateNew(self):
-        self.W = WeightsBias.InitialParameters(self.num_input, self.num_output, self.init_method, nonlinearity='linear')
+        self.W = WeightsBias.InitialParameters(self.num_input, self.num_output, nonlinearity='linear',
+                                               init_method=self.init_method)
         self.B = np.zeros((1, self.num_output)).astype('float32')
         self.dW = np.zeros(self.W.shape).astype('float32')
         self.dB = np.zeros(self.B.shape).astype('float32')
@@ -68,32 +69,32 @@ class WeightsBias(object):
     @staticmethod
     def InitialParameters(num_input, num_output, init_method, nonlinearity='linear'):
         if init_method == InitialMethod.Zero:
-            W = np.zeros((num_input, num_output)).astype('float32')
+            Weight = np.zeros((num_input, num_output)).astype('float32')
         elif init_method == InitialMethod.Uniform:
-            W = np.random.uniform(size=(num_input, num_output)).astype('float32')
+            Weight = np.random.uniform(size=(num_input, num_output)).astype('float32')
         elif init_method == InitialMethod.Normal:
-            W = np.random.normal(size=(num_input, num_output)).astype('float32')
+            Weight = np.random.normal(size=(num_input, num_output)).astype('float32')
         elif init_method == InitialMethod.MSRA:
-            W = np.random.normal(0, np.sqrt(2 / num_output), size=(num_input, num_output)).astype('float32')
+            Weight = np.random.normal(0, np.sqrt(2 / num_output), size=(num_input, num_output)).astype('float32')
         elif init_method == InitialMethod.Xavier_Uniform:
             gain = calculate_gain(nonlinearity)
             t = gain * math.sqrt(6.0 / float(num_output + num_input))
-            W = np.random.uniform(-t, t, size=(num_input, num_output)).astype('float32')
+            Weight = np.random.uniform(-t, t, size=(num_input, num_output)).astype('float32')
         elif init_method == InitialMethod.Xavier_Normal:
             gain = calculate_gain(nonlinearity)
             t = gain * math.sqrt(2.0 / float(num_output + num_input))
-            W = np.random.normal(0., t, size=(num_input, num_output)).astype('float32')
+            Weight = np.random.normal(0., t, size=(num_input, num_output)).astype('float32')
         elif init_method == InitialMethod.Kaiming_Uniform:
             gain = calculate_gain(nonlinearity)
             std = gain / math.sqrt(num_input)
             bound = math.sqrt(3.0) * std
-            W = np.random.uniform(-bound, bound, size=(num_input, num_output)).astype('float32')
+            Weight = np.random.uniform(-bound, bound, size=(num_input, num_output)).astype('float32')
         elif init_method == InitialMethod.Kaiming_Normal:
             gain = calculate_gain(nonlinearity)
             std = gain / math.sqrt(num_input)
-            W = np.random.normal(0,std,size=(num_input,num_output)).astype('float32')
+            Weight = np.random.normal(0, std, size=(num_input, num_output)).astype('float32')
 
-        return W
+        return Weight
 
     def CreateOptimizers(self):
         self.oW = OptimizerSelector.CreateOptimizer(self.lr, self.optimizer_name)
@@ -134,23 +135,32 @@ class WeightsBias(object):
         self.W = data["W"]
         self.B = data["B"]
 
-    def distributed_SaveResultValue(self):
+    def distributed_SaveGradient(self):
+        grad = {self.name: {"dW": self.dW, "dB": self.dB}}
+        return grad
+
+    def distributed_SaveParameter(self):
         dis = {self.name: {"W": self.W, "B": self.B}}
         return dis
 
-    def distributed_LoadResultValue(self, param: dict):
+    def distributed_LoadGradient(self, param: dict):
+        # _param = list(param.keys())
+        self.dW = param[self.name]['dW']
+        self.dB = param[self.name]['dB']
+
+    def distributed_LoadParameter(self, param: dict):
         # _param = list(param.keys())
         self.W = param[self.name]['W']
         self.B = param[self.name]['B']
 
-    def distributed_AddResultValue(self, param: dict):
+    def distributed_AddGradient(self, param: dict):
         # _param = list(param.keys())
-        self.W = self.W + param[self.name]['W']
-        self.B = self.B + param[self.name]['B']
+        self.dW = self.dW + param[self.name]['dW']
+        self.dB = self.dB + param[self.name]['dB']
 
-    def distributed_AverageResultValue(self, num):
-        self.W = self.W / num
-        self.B = self.B / num
+    def distributed_AverageGradient(self, num):
+        self.dW = self.dW / num
+        self.dB = self.dB / num
 
     def _calculate_fan_in_and_fan_out(self, tensor: np.ndarray):
         dimensions = tensor.ndim

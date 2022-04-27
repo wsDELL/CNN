@@ -96,26 +96,33 @@ class BatchNormalLayer(layer):
         self.running_variance = data['variance']
 
     def distributed_save_parameters(self):
-        params = {self.name: {"gamma": self.gamma, "beta": self.beta, "mean": self.running_mean,
-                              "variance": self.running_variance}}
+        params = {self.name: {"gamma": self.gamma, "beta": self.beta}}
         return params
 
     def distributed_load_parameters(self, param):
         # iteration_count = list(param.keys())
         self.gamma = param[self.name]['gamma']
         self.beta = param[self.name]['beta']
-        self.running_mean = param[self.name]['mean']
-        self.running_variance = param[self.name]['variance']
+        # self.running_mean = param[self.name]['mean']
+        # self.running_variance = param[self.name]['variance']
 
-    def distributed_add_parameters(self, param):
+    def distributed_save_gradient(self):
+        grad = {self.name: {"d_gamma": self.d_gamma, "d_beta": self.d_beta}}
+        return grad
+
+    def distributed_load_gradient(self, grad):
+        self.d_gamma = grad[self.name]['d_gamma']
+        self.d_beta = grad[self.name]['d_beta']
+
+    def distributed_add_gradient(self, grad):
         # iteration_count = list(param.keys())
-        self.gamma = self.gamma + param[self.name]['gamma']
-        self.beta = self.beta + param[self.name]['beta']
-        self.running_mean = self.running_mean + param[self.name]['mean']
-        self.running_variance = self.running_variance + param[self.name]['variance']
+        self.d_gamma = self.d_gamma + grad[self.name]['d_gamma']
+        self.d_beta = self.beta + grad[self.name]['d_beta']
+        # self.running_mean = self.running_mean + grad[self.name]['mean']
+        # self.running_variance = self.running_variance + grad[self.name]['variance']
 
-    def distributed_average_parameters(self, num):
-        self.gamma = self.gamma/num
-        self.beta = self.beta/num
-        self.running_mean = self.running_mean/num
-        self.running_variance = self.running_variance/num
+    def distributed_average_gradient(self, num):
+        self.d_gamma = self.d_gamma/num
+        self.d_beta = self.d_beta/num
+        # self.running_mean = self.running_mean/num
+        # self.running_variance = self.running_variance/num

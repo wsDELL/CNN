@@ -80,24 +80,3 @@ class LossFunction(object):
         return loss, acc
 
 
-def CrossEntropyLoss(A, Y):
-    p1 = np.log(A + 1e-7)
-    p2 = np.multiply(Y, p1)
-    loss = -p2
-    return loss
-
-
-def BinaryCrossEntropyLoss(A, Y):
-    p1 = 1 - Y
-    p2 = np.log(1 - A)
-    p3 = np.log(A)
-    p4 = np.multiply(p1, p2)
-    p5 = np.multiply(Y, p3)
-    loss = -(p4 + p5)
-    return loss
-
-def MSE(A, Y):
-    # loss
-    p1 = A - Y
-    loss = np.multiply(p1, p1)
-    return loss

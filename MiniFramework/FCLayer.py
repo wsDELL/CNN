@@ -8,10 +8,10 @@ from MiniFramework.HyperParameter import *
 
 
 class FCLayer(layer):
-    def __init__(self, input_n, output_n, hp):
+    def __init__(self, input_n, output_n, hp, init_method=InitialMethod.Xavier_Uniform):
         self.input_num = input_n
         self.output_num = output_n
-        self.WB = WeightsBias(self.input_num, self.output_num, hp.init_method, hp.optimizer_name, hp.lr)
+        self.WB = WeightsBias(self.input_num, self.output_num,  hp.optimizer_name, hp.lr,init_method=init_method)
         self.regular_name = hp.regular_name
         self.regular_value = hp.regular_value
         self.input_v = None
@@ -62,16 +62,25 @@ class FCLayer(layer):
         self.WB.LoadResultValue()
 
     def distributed_save_parameters(self):
-        param = self.WB.distributed_SaveResultValue()
+        param = self.WB.distributed_SaveParameter()
         return param
 
     def distributed_load_parameters(self, param: dict):
-        self.WB.distributed_LoadResultValue(param)
+        self.WB.distributed_LoadParameter(param)
 
-    def distributed_add_parameters(self, param: dict):
-        self.WB.distributed_AddResultValue(param)
+    def distributed_save_gradient(self):
+        grad = self.WB.distributed_SaveGradient()
+        return grad
 
-    def distributed_average_parameters(self, num):
-        self.WB.distributed_AverageResultValue(num)
+    def distributed_load_gradient(self,grad):
+        self.WB.distributed_LoadGradient(grad)
+
+    def distributed_add_gradient(self, grad: dict):
+        self.WB.distributed_AddGradient(grad)
+
+    def distributed_average_gradient(self, num):
+        self.WB.distributed_AverageGradient(num)
+
+
 
 

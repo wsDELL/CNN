@@ -7,7 +7,8 @@ from MiniFramework.MnistDataReader import *
 
 
 class ConLayer(layer):
-    def __init__(self, in_planes, out_planes, kernel_size: int, hp, layer_type='', stride=1, padding=0):
+    def __init__(self, in_planes, out_planes, kernel_size: int, hp, layer_type='', stride=1, padding=0,
+                 init_method=InitialMethod.Kaiming_Normal):
         super().__init__(layer_type)
         self.input_channel = in_planes
         # self.input_width = input_shape[1]
@@ -18,6 +19,7 @@ class ConLayer(layer):
         self.stride = stride
         self.padding = padding
         self.hp = hp
+        self.init_method = init_method
         self.input_v = None
         self.batch_size = None
         self.output_v = None
@@ -27,7 +29,7 @@ class ConLayer(layer):
 
     def initialize(self, folder, name, create_new=True):
         self.WB = ConWeightBias(self.input_channel, self.output_channel, self.filter_height, self.filter_width,
-                                self.hp.init_method, self.hp.optimizer_name, self.hp.lr)
+                                 self.hp.optimizer_name, self.hp.lr,init_method=self.init_method)
         self.WB.initialize(folder, name, create_new)
         self.name = name
 
@@ -70,11 +72,12 @@ class ConLayer(layer):
                                                                    self.filter_width) + self.regular_value * self.WB.W / self.batch_size
         elif self.regular_name == RegularMethod.L1:
             self.WB.dW = np.transpose(col_dW, axes=(1, 0)).reshape(self.output_channel, self.input_channel,
-                                                               self.filter_height, self.filter_width) + self.regular_value * np.sign(self.WB.W) / self.batch_size
+                                                                   self.filter_height,
+                                                                   self.filter_width) + self.regular_value * np.sign(
+                self.WB.W) / self.batch_size
         else:
             self.WB.dW = np.transpose(col_dW, axes=(1, 0)).reshape(self.output_channel, self.input_channel,
                                                                    self.filter_height, self.filter_width)
-
 
         col_delta_out = np.dot(col_delta_in, self.col_w.T)
         delta_out = col2img(col_delta_out, self.input_v.shape, self.filter_height, self.filter_width, self.stride,
@@ -160,14 +163,21 @@ class ConLayer(layer):
         self.WB.LoadResultValue()
 
     def distributed_save_parameters(self):
-        param = self.WB.distributed_SaveResultValue()
+        param = self.WB.distributed_SaveParameter()
         return param
 
     def distributed_load_parameters(self, param):
-        self.WB.distributed_LoadResultValue(param)
+        self.WB.distributed_LoadParameter(param)
 
-    def distributed_add_parameters(self, param):
-        self.WB.distributed_AddResultValue(param)
+    def distributed_add_gradient(self, grad):
+        self.WB.distributed_AddGradient(grad)
 
-    def distributed_average_parameters(self, num):
-        self.WB.distributed_AverageResultValue(num)
+    def distributed_average_gradient(self, num):
+        self.WB.distributed_AverageGradient(num)
+
+    def distributed_save_gradient(self):
+        grad = self.WB.distributed_SaveGradient()
+        return grad
+
+    def distributed_load_gradient(self, grad):
+        self.WB.distributed_LoadGradient(grad)

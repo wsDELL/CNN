@@ -44,7 +44,7 @@ def LoadData():
     mdr = CIFAR10DataReader(train_x, train_y, test_x, test_y)
     # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
     mdr.ReadData()
-    mdr.server_Shuffle()
+    mdr.total_Shuffle()
     mdr.GenerateValidationSet(k=12)
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
@@ -66,11 +66,8 @@ def model():
     max_epoch = 5
     batch_size = 128
     learning_rate = 0.1
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier_Uniform,
-        optimizer_name=OptimizerName.Momentum)
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
+                             optimizer_name=OptimizerName.Momentum)
 
     net = NeuralNet(params, "mnist_cnn")
 
@@ -108,9 +105,7 @@ def model1():
     max_epoch = 20
     batch_size = 128
     learning_rate = 0.1
-    params = HyperParameters(learning_rate, max_epoch, batch_size,
-                             net_type=NetType.MultipleClassifier,
-                             init_method=InitialMethod.Xavier_Uniform,
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
                              optimizer_name=OptimizerName.SGD)
 
     net = NeuralNet(params, "alexnet")
@@ -178,11 +173,8 @@ def dis_Alexnet():
     max_epoch = 40
     batch_size = 128
     learning_rate = 0.01
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Kaiming_Normal,
-        optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
+                             optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
 
     net = NeuralNet(params, "dis_alexnet")
 
@@ -245,12 +237,12 @@ def dis_Alexnet():
 
 task_queue = Queue()
 result_queue = Queue()
-order_queue = Queue()
+total_order_queue = Queue()
 check_order_queue = Queue()
 
 
 def return_send_order_queue():
-    global order_queue
+    global total_order_queue
     return order_queue
 
 
@@ -279,11 +271,8 @@ if __name__ == '__main__':
     max_epoch = 5
     batch_size = 128
     learning_rate = 0.01
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Kaiming_Uniform,
-        optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
+                             optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
     lock = multiprocessing.Lock()
     dataReader = LoadData()
     # net = model()
@@ -327,7 +316,7 @@ if __name__ == '__main__':
     for epoch in range(net.hp.max_epoch):
         print(f"epoch {epoch} start")
         # dataReader.Shuffle()
-        dataReader.Shuffle()
+        dataReader.training_Shuffle()
         iteration_count = 0
         while True:
             print('put task %d' % iteration_count)
@@ -345,8 +334,8 @@ if __name__ == '__main__':
                     if i == 0:
                         net.distributed_load_parameters(result_set[i])
                     else:
-                        net.distributed_add_parameters(result_set[i])
-                net.distributed_average_parameters(num_worker)
+                        net.distributed_add_gradient(result_set[i])
+                net.distributed_average_gradient(num_worker)
                 param = net.distributed_save_parameters()
                 lock.release()
                 print('update finish')

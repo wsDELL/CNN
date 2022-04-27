@@ -46,7 +46,7 @@ def LoadData():
     mdr.ReadData()
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
-    mdr.Shuffle()
+    mdr.training_Shuffle()
     mdr.GenerateValidationSet(k=12)
     return mdr
 
@@ -66,11 +66,8 @@ def model():
     max_epoch = 5
     batch_size = 128
     learning_rate = 0.1
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Xavier_Uniform,
-        optimizer_name=OptimizerName.Momentum)
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
+                             optimizer_name=OptimizerName.Momentum)
 
     net = NeuralNet(params, "mnist_cnn")
 
@@ -134,9 +131,7 @@ def model1():
     max_epoch = 20
     batch_size = 128
     learning_rate = 0.1
-    params = HyperParameters(learning_rate, max_epoch, batch_size,
-                             net_type=NetType.MultipleClassifier,
-                             init_method=InitialMethod.Xavier_Uniform,
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
                              optimizer_name=OptimizerName.SGD)
 
     net = NeuralNet(params, "alexnet")
@@ -228,11 +223,8 @@ if __name__ == '__main__':
     max_epoch = 5
     batch_size = 128
     learning_rate = 0.01
-    params = HyperParameters(
-        learning_rate, max_epoch, batch_size,
-        net_type=NetType.MultipleClassifier,
-        init_method=InitialMethod.Kaiming_Uniform,
-        optimizer_name=OptimizerName.Adam)
+    params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
+                             optimizer_name=OptimizerName.Adam)
     lock = multiprocessing.Lock()
     dataReader = LoadData()
     # net = model()
@@ -265,7 +257,7 @@ if __name__ == '__main__':
     n = 2
     for epoch in range(net.hp.max_epoch):
         print(f"epoch {epoch} start")
-        dataReader.Shuffle()
+        dataReader.training_Shuffle()
         iteration_count = 0
         total_iteration_count = 0
         final = False
@@ -292,7 +284,7 @@ if __name__ == '__main__':
                     break
             for i in range(len(result1)):
                 net.distributed_load_parameters(result1[i])
-            net.distributed_average_parameters(average_num)
+            net.distributed_average_gradient(average_num)
             param = net.distributed_save_parameters()
             lock.release()
             print('update finish')
