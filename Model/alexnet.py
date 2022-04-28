@@ -24,7 +24,7 @@ class AlexNet(NeuralNet):
         self.add_layer(DropoutLayer(ratio=0.3), "d2")
         self.add_layer(FCLayer(1024, 1024, param), "f2")
         self.add_layer(BatchNormalLayer(1024), 'bn2')
-        self.add_layer(ReLU(), "relu6")
+        self.add_layer(ReLU(), "relu7")
         self.add_layer(FCLayer(1024, 10, param), "f3")
         self.add_layer(Softmax(), "s4")
 

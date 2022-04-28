@@ -34,14 +34,15 @@ class BatchNormalLayer(layer):
         self.name = name
 
     def forward(self, input_v, train=True):
-        assert (input_v.ndim == 2 or input_v.ndim == 4)# fc or cv
+        assert (input_v.ndim == 2 or input_v.ndim == 4)  # fc or cv
         if input_v.ndim == 4 and self.counter is True:
             self.input_width = input_v.shape[2]
             self.input_height = input_v.shape[3]
-            self.gamma = np.ones((1, self.input_size, self.input_width,self.input_height)).astype('float32')
-            self.beta = np.zeros((1, self.input_size, self.input_width,self.input_height)).astype('float32')
-            self.running_mean = np.zeros((1, self.input_size, self.input_width,self.input_height)).astype('float32')
-            self.running_variance = np.zeros((1, self.input_size, self.input_width,self.input_height)).astype('float32')
+            self.gamma = np.ones((1, self.input_size, self.input_width, self.input_height)).astype('float32')
+            self.beta = np.zeros((1, self.input_size, self.input_width, self.input_height)).astype('float32')
+            self.running_mean = np.zeros((1, self.input_size, self.input_width, self.input_height)).astype('float32')
+            self.running_variance = np.zeros((1, self.input_size, self.input_width, self.input_height)).astype(
+                'float32')
             self.counter = False
         self.input_v = input_v
 
@@ -96,33 +97,37 @@ class BatchNormalLayer(layer):
         self.running_variance = data['variance']
 
     def distributed_save_parameters(self):
-        params = {self.name: {"gamma": self.gamma, "beta": self.beta}}
+        params = {self.name: {"gamma": self.gamma, "beta": self.beta, "mean": self.running_mean,
+                              "variance": self.running_variance}}
         return params
 
     def distributed_load_parameters(self, param):
         # iteration_count = list(param.keys())
         self.gamma = param[self.name]['gamma']
         self.beta = param[self.name]['beta']
-        # self.running_mean = param[self.name]['mean']
-        # self.running_variance = param[self.name]['variance']
+        self.running_mean = param[self.name]['mean']
+        self.running_variance = param[self.name]['variance']
 
     def distributed_save_gradient(self):
-        grad = {self.name: {"d_gamma": self.d_gamma, "d_beta": self.d_beta}}
+        grad = {self.name: {"d_gamma": self.d_gamma, "d_beta": self.d_beta, 'mean': self.running_mean,
+                            'variance': self.running_variance}}
         return grad
 
     def distributed_load_gradient(self, grad):
         self.d_gamma = grad[self.name]['d_gamma']
         self.d_beta = grad[self.name]['d_beta']
+        self.running_mean = grad[self.name]['mean']
+        self.running_variance = grad[self.name]['variance']
 
     def distributed_add_gradient(self, grad):
         # iteration_count = list(param.keys())
         self.d_gamma = self.d_gamma + grad[self.name]['d_gamma']
-        self.d_beta = self.beta + grad[self.name]['d_beta']
-        # self.running_mean = self.running_mean + grad[self.name]['mean']
-        # self.running_variance = self.running_variance + grad[self.name]['variance']
+        self.d_beta = self.d_beta + grad[self.name]['d_beta']
+        self.running_mean = self.running_mean + grad[self.name]['mean']
+        self.running_variance = self.running_variance + grad[self.name]['variance']
 
     def distributed_average_gradient(self, num):
-        self.d_gamma = self.d_gamma/num
-        self.d_beta = self.d_beta/num
-        # self.running_mean = self.running_mean/num
-        # self.running_variance = self.running_variance/num
+        self.d_gamma = self.d_gamma / num
+        self.d_beta = self.d_beta / num
+        self.running_mean = self.running_mean / num
+        self.running_variance = self.running_variance / num

@@ -164,13 +164,15 @@ if __name__ == '__main__':
                     if len(grads) == num_worker:
                         break
                 for i in range(len(grads)):
-                    if i == 0:
+                    # if i == 0:
                         net.distributed_load_gradient(grads[i])
-                        # net.update()
-                    else:
-                        net.distributed_add_gradient(grads[i])
-                net.distributed_average_gradient(num_worker)
-                net.update()
+                        net.update()
+                #     else:
+                #         net.distributed_add_gradient(grads[i])
+                # net.distributed_average_gradient(num_worker)
+                # net.update()
+                batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration_count)
+                net.accuracy_cal(batch_x, batch_y, epoch, iteration_count)
                 param = net.distributed_save_parameters()
                 lock.release()
                 print('update finish')
@@ -180,7 +182,7 @@ if __name__ == '__main__':
                 if batch_x.shape[0] < net.hp.batch_size:
                     batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration_count - 1)
                 need_stop = net.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration_count)
-                net.SaveLossHistory(valid_count, name="dis_alexnet.csv")
+                net.SaveLossHistory(valid_count, name="dis_alexnet1.csv")
                 valid_count += 1
                 if need_stop:
                     break

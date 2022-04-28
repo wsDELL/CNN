@@ -143,10 +143,10 @@ class WeightsBias(object):
         dis = {self.name: {"W": self.W, "B": self.B}}
         return dis
 
-    def distributed_LoadGradient(self, param: dict):
+    def distributed_LoadGradient(self, grad: dict):
         # _param = list(param.keys())
-        self.dW = param[self.name]['dW']
-        self.dB = param[self.name]['dB']
+        self.dW = grad[self.name]['dW']
+        self.dB = grad[self.name]['dB']
 
     def distributed_LoadParameter(self, param: dict):
         # _param = list(param.keys())

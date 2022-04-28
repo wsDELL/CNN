@@ -93,6 +93,7 @@ class NeuralNet(object):
                 time3 = time.time()
                 # final update w,b
                 self.__update()
+                self.accuracy_cal(batch_x, batch_y, epoch, iteration)
                 time4 = time.time()
                 print(f"iteration {iteration} , forward time: {time2 - time1}, "
                       f"backward time: {time3 - time2}, update time: {time4 - time3},total time: {time4 - time1}")
@@ -134,6 +135,18 @@ class NeuralNet(object):
 
         grad = self.distributed_save_gradient()
         return grad
+
+    def accuracy_cal(self, train_x, train_y, epoch, total_iteration):
+        print("epoch=%d, total_iteration=%d" % (epoch, total_iteration))
+
+        # l1/l2 cost
+        regular_cost = self.__get_regular_cost(self.hp.regular_name)
+
+        # calculate train loss
+        self.__forward(train_x, train=False)
+        loss_train, accuracy_train = self.loss_func.CheckLoss(self.output_v, train_y)
+        loss_train = loss_train + regular_cost / train_x.shape[0]
+        print("loss_train=%.6f, accuracy_train=%f" % (loss_train, accuracy_train))
 
     def CheckErrorAndLoss(self, dataReader, train_x, train_y, epoch, total_iteration):
         print("epoch=%d, total_iteration=%d" % (epoch, total_iteration))
@@ -228,21 +241,21 @@ class NeuralNet(object):
             layer.distributed_load_parameters(param[name])
 
     def distributed_load_gradient(self,grad):
-        print("load gradient")
         name = list(grad.keys())[0]
+        print(f"load gradient {name}")
         for i in range(self.layer_count):
             layer = self.layer_list[i]
             layer.distributed_load_gradient(grad[name])
 
     def distributed_add_gradient(self, grad):
-        print("add parameters")
+        print("add gradient")
         name = list(grad.keys())[0]
         for i in range(self.layer_count):
             layer = self.layer_list[i]
             layer.distributed_add_gradient(grad[name])
 
     def distributed_average_gradient(self, num):
-        print("average parameters")
+        print("average gradient")
         for i in range(self.layer_count):
             layer = self.layer_list[i]
             layer.distributed_average_gradient(num)
