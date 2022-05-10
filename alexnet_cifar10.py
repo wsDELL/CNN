@@ -71,7 +71,7 @@ def LoadData1():
 if __name__ == '__main__':
     time1 = time.time()
     num_output = 10
-    max_epoch = 40
+    max_epoch = 50
     batch_size = 128
     learning_rate = 0.01
     params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     dataReader = LoadData()
     net = AlexNet(param=params, model_name="Alexnet")
     print("start")
-    net.train(dataReader, checkpoint=0.1, need_test=True, file_name="alexnet_loss_data4.csv")
+    net.train(dataReader, checkpoint=0.1, need_test=True, file_name="alexnet_loss_data5.csv")
     print("end")
     time2 = time.time()
     print(f"total time: {time2 - time1}")

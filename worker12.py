@@ -6,6 +6,8 @@ from multiprocessing import Queue, Array
 from MiniFramework import *
 from Model.alexnet import AlexNet
 from Model.vgg import *
+from Model.dis_alexnet import *
+
 
 train_x = "./data/MNIST/raw/train-images-idx3-ubyte"
 train_y = "./data/MNIST/raw/train-labels-idx1-ubyte"
@@ -137,7 +139,7 @@ if __name__ == '__main__':
     num_output = 10
     max_epoch = 50
     batch_size = 128
-    learning_rate = 0.01
+    learning_rate = 0.005
     params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
                              optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
     # net = VGG(param=params,vgg_name="VGG11")

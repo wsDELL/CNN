@@ -97,16 +97,18 @@ class BatchNormalLayer(layer):
         self.running_variance = data['variance']
 
     def distributed_save_parameters(self):
-        params = {self.name: {"gamma": self.gamma, "beta": self.beta, "mean": self.running_mean,
-                              "variance": self.running_variance}}
+        params = {self.name: {"gamma": self.gamma, "beta": self.beta}}
         return params
+
+    # , "mean": self.running_mean,
+    # "variance": self.running_variance
 
     def distributed_load_parameters(self, param):
         # iteration_count = list(param.keys())
         self.gamma = param[self.name]['gamma']
         self.beta = param[self.name]['beta']
-        self.running_mean = param[self.name]['mean']
-        self.running_variance = param[self.name]['variance']
+        # self.running_mean = param[self.name]['mean']
+        # self.running_variance = param[self.name]['variance']
 
     def distributed_save_gradient(self):
         grad = {self.name: {"d_gamma": self.d_gamma, "d_beta": self.d_beta, 'mean': self.running_mean,
@@ -116,18 +118,22 @@ class BatchNormalLayer(layer):
     def distributed_load_gradient(self, grad):
         self.d_gamma = grad[self.name]['d_gamma']
         self.d_beta = grad[self.name]['d_beta']
-        self.running_mean = grad[self.name]['mean']
-        self.running_variance = grad[self.name]['variance']
+        running_mean = grad[self.name]['mean']
+        running_variance = grad[self.name]['variance']
+        self.update_mean_and_variance(running_mean,running_variance)
 
     def distributed_add_gradient(self, grad):
         # iteration_count = list(param.keys())
         self.d_gamma = self.d_gamma + grad[self.name]['d_gamma']
         self.d_beta = self.d_beta + grad[self.name]['d_beta']
-        self.running_mean = self.running_mean + grad[self.name]['mean']
-        self.running_variance = self.running_variance + grad[self.name]['variance']
+        running_mean = grad[self.name]['mean']
+        running_variance = grad[self.name]['variance']
+        self.update_mean_and_variance(running_mean, running_variance)
 
     def distributed_average_gradient(self, num):
         self.d_gamma = self.d_gamma / num
         self.d_beta = self.d_beta / num
-        self.running_mean = self.running_mean / num
-        self.running_variance = self.running_variance / num
+
+    def update_mean_and_variance(self, running_mean, running_variance):
+        self.running_mean = self.momentum * self.running_mean + (1.0 - self.momentum) * running_mean
+        self.running_variance = self.momentum * self.running_variance + (1.0 - self.momentum) * running_variance

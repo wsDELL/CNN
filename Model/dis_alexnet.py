@@ -1,7 +1,7 @@
 from MiniFramework import *
 
 
-class AlexNet(NeuralNet):
+class dis_AlexNet(NeuralNet):
     def __init__(self, param, model_name):
         super().__init__(param, model_name)
         self.add_layer(ConLayer(3, 64, kernel_size=3, hp=param, stride=2, padding=1), "c1")
@@ -16,17 +16,15 @@ class AlexNet(NeuralNet):
         self.add_layer(ReLU(), "relu4")
         self.add_layer(ConLayer(256, 256, kernel_size=3, hp=param, stride=1, padding=1), "c5")
         self.add_layer(ReLU(), "relu5")
-        self.add_layer(PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX), "p5")
-        self.add_layer(DropoutLayer(ratio=0.5), 'd1')
-        self.add_layer(FCLayer(256 * 2 * 2, 4096, param), "f1")
-        # self.add_layer(BatchNormalLayer(1024), 'bn1')
+        self.add_layer(PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MEAN), "p5")
+        self.add_layer(DropoutLayer(ratio=0.3), 'd1')
+        self.add_layer(FCLayer(256 * 2 * 2, 1024, param), "f1")
         self.add_layer(ReLU(), "relu6")
-        self.add_layer(DropoutLayer(ratio=0.5), "d2")
-        self.add_layer(FCLayer(4096, 4096, param), "f2")
-        # self.add_layer(BatchNormalLayer(1024), 'bn2')
+        self.add_layer(DropoutLayer(ratio=0.3), "d2")
+        self.add_layer(FCLayer(1024, 1024, param), "f2")
         self.add_layer(ReLU(), "relu7")
-        self.add_layer(FCLayer(4096, 10, param), "f3")
-
+        self.add_layer(FCLayer(1024, 10, param), "f3")
+        self.add_layer(Softmax(), "s4")
 
     def forward(self, input_v, train=True):
         output = None
