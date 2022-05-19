@@ -16,17 +16,17 @@ class AlexNet(NeuralNet):
         self.add_layer(ReLU(), "relu4")
         self.add_layer(ConLayer(256, 256, kernel_size=3, hp=param, stride=1, padding=1), "c5")
         self.add_layer(ReLU(), "relu5")
-        self.add_layer(PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX), "p5")
+        self.add_layer(PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MEAN), "p5")
         self.add_layer(DropoutLayer(ratio=0.5), 'd1')
-        self.add_layer(FCLayer(256 * 2 * 2, 4096, param), "f1")
+        self.add_layer(FCLayer(256 * 2 * 2, 1024, param), "f1")
         # self.add_layer(BatchNormalLayer(1024), 'bn1')
         self.add_layer(ReLU(), "relu6")
         self.add_layer(DropoutLayer(ratio=0.5), "d2")
-        self.add_layer(FCLayer(4096, 4096, param), "f2")
+        self.add_layer(FCLayer(1024, 1024, param), "f2")
         # self.add_layer(BatchNormalLayer(1024), 'bn2')
         self.add_layer(ReLU(), "relu7")
-        self.add_layer(FCLayer(4096, 10, param), "f3")
-
+        self.add_layer(FCLayer(1024, 10, param), "f3")
+        self.add_layer(Softmax(), "s1")
 
     def forward(self, input_v, train=True):
         output = None
@@ -48,5 +48,3 @@ class AlexNet(NeuralNet):
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
             layer.update()
-
-

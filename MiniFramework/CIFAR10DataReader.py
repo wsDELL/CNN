@@ -55,11 +55,28 @@ class CIFAR10DataReader(object):
         self.XTest = self.__NormalizeData(self.XTestRaw)
         self.XDev = self.__NormalizeData(self.XDev)
 
+    def worker_NormalizeX(self):
+        self.XTrain = self.__NormalizeData(self.XTrain)
+
     def __NormalizeData(self, XRawData):
         X_New = np.zeros(XRawData.shape).astype('float32')
         x_max = np.max(XRawData)
         x_min = np.min(XRawData)
         X_New = (XRawData - x_min) / (x_max - x_min)
+        return X_New
+
+    def __max_min_normalize(self, XRawData):
+        X_New = np.zeros(XRawData.shape).astype('float32')
+        x_max = np.max(XRawData)
+        x_min = np.min(XRawData)
+        X_New = (XRawData - x_min) / (x_max - x_min)
+        return X_New
+
+    def __z_score_normalize(self, XRawData):
+        X_New = np.zeros(XRawData.shape).astype('float32')
+        x_mean = np.mean(XRawData)
+        x_std = np.std(XRawData)
+        X_New = (XRawData - x_mean) / x_std
         return X_New
 
     def NormalizeY(self, nettype, base=0):
@@ -76,6 +93,17 @@ class CIFAR10DataReader(object):
             self.YDev = self.__ToOneHot(self.YDev, base)
             self.YTrain = self.__ToOneHot(self.YTrain, base)
             self.YTest = self.__ToOneHot(self.YTestRaw, base)
+
+    def worker_NormalizeY(self, nettype, base=0):
+        if nettype == NetType.Fitting:
+            y_merge = np.vstack((self.YTrainRaw, self.YTestRaw))
+            y_merge_norm = self.__NormalizeY(y_merge)
+            train_count = self.YTrainRaw.shape[0]
+            self.YTrain = y_merge_norm[0:train_count, :]
+        elif nettype == NetType.BinaryClassifier:
+            self.YTrain = self.__ToZeroOne(self.YTrainRaw, base)
+        elif nettype == NetType.MultipleClassifier:
+            self.YTrain = self.__ToOneHot(self.YTrain, base)
 
     def __NormalizeY(self, raw_data):
         assert (raw_data.shape[1] == 1)
@@ -168,16 +196,37 @@ class CIFAR10DataReader(object):
         random.seed(seed)
         order = [i for i in range(len(self.XTrainRaw))]
         random.shuffle(order)
+        XP = self.XTrainRaw[order, :, :, :]
+        YP = self.YTrainRaw[order, :]
+        self.XTrain = XP
+        self.YTrain = YP
         self.order = order
 
+    def data_split(self, num_worker: int):
+        start = 0
+        if self.order != len(self.XTrain):
+            training_order = self.order[0:len(self.XTrain)]
+        else:
+            training_order = self.order
+        current = int(len(training_order) / num_worker)
+        data_set = []
+        for i in range(num_worker):
+            if i != num_worker - 1:
+                data_set.append(training_order[start:start + current])
+                start = start + current
+            else:
+                data_set.append(training_order[start:len(training_order)])
+        return data_set
+
     def training_reorder(self, new_order):
-        XP = self.XTrain[new_order,:,:,:]
-        YP = self.YTrain[new_order,:]
+        XP = self.XTrain[new_order, :, :, :]
+        YP = self.YTrain[new_order, :]
         self.XTrain = XP
         self.YTrain = YP
 
-    def total_reorder(self,new_order):
-        XP = self.XTrainRaw[new_order,:,:,:]
-        YP = self.YTrainRaw[new_order,:]
+    def total_reorder(self, new_order):
+        XP = self.XTrainRaw[new_order, :, :, :]
+        YP = self.YTrainRaw[new_order, :]
         self.XTrain = XP
         self.YTrain = YP
+        self.num_train = len(self.YTrain)

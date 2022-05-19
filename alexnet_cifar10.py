@@ -71,9 +71,9 @@ def LoadData1():
 if __name__ == '__main__':
     time1 = time.time()
     num_output = 10
-    max_epoch = 50
+    max_epoch = 100
     batch_size = 128
-    learning_rate = 0.01
+    learning_rate = 0.005
     params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
                              optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
     dataReader = LoadData()

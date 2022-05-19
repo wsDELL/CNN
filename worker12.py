@@ -8,7 +8,6 @@ from Model.alexnet import AlexNet
 from Model.vgg import *
 from Model.dis_alexnet import *
 
-
 train_x = "./data/MNIST/raw/train-images-idx3-ubyte"
 train_y = "./data/MNIST/raw/train-labels-idx1-ubyte"
 test_x = "./data/MNIST/raw/t10k-images-idx3-ubyte"
@@ -22,6 +21,8 @@ QueueManager.register('get_task_queue')
 QueueManager.register('get_gradient_queue')
 QueueManager.register('send_order_queue')
 QueueManager.register('send_training_order_queue')
+QueueManager.register('check_data_status')
+QueueManager.register('send_data_status')
 
 
 cifar_name = ["data_batch_1","data_batch_2","data_batch_3","data_batch_4","data_batch_5"]
@@ -161,32 +162,37 @@ if __name__ == '__main__':
     training_order = manager.send_training_order_queue()
     task = manager.get_task_queue()
     result = manager.get_gradient_queue()
+    status = manager.send_data_status()
+    checking = manager.check_data_status()
     dataReader = LoadData()
     if not total_order.empty():
         data_order = total_order.get()
         dataReader.ReadData()
         dataReader.total_reorder(data_order)
-        dataReader.GenerateValidationSet(k=12)
-        dataReader.NormalizeX()
-        dataReader.NormalizeY(NetType.MultipleClassifier, base=0)
+        dataReader.worker_NormalizeX()
+        dataReader.worker_NormalizeY(NetType.MultipleClassifier, base=0)
+        print("data loaded")
+    if net.hp.batch_size == -1 or net.hp.batch_size > dataReader.num_train:
+        net.hp.batch_size = dataReader.num_train
+    max_iteration = math.ceil(dataReader.num_train / net.hp.batch_size)
     while True:
-        count = 0
-        if task.empty():
-            time.sleep(0.1)
-            # count = count + 1
-            # if count > 500:
-            #     break
-        if not training_order.empty():
-            data_order = training_order.get()
-            dataReader.training_reorder(data_order)
-            print("Shuffle finish")
-        iteration = task.get()
-        iteration_count = list(iteration.keys())[0]
-        net.distributed_load_parameters(iteration)
-        batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration_count)
-        print(f'worker get {iteration_count}')
-        grad = net.distributed_train(batch_x,batch_y)
-        iteration[iteration_count] = grad
-        result.put(iteration)
+        dataReader.training_Shuffle()
+        for iteration in range(max_iteration):
+            parameters = []
+            while True:
+                if task.empty():
+                    pass
+                else:
+                    parameters = task.get()
+                    break
+            iteration_count = list(parameters.keys())[0]
+            print(f'worker get {iteration_count}')
+            net.distributed_load_parameters(parameters)
+            batch_x, batch_y = dataReader.GetBatchTrainSamples(net.hp.batch_size, iteration)
+            grad = net.distributed_train(batch_x,batch_y)
+            parameters[iteration_count] = grad
+            if iteration == max_iteration - 1:
+                parameters['epoch_status'] = 1
+            result.put(parameters)
 
     print('worker exit')
