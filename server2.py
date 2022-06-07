@@ -238,7 +238,7 @@ def dis_Alexnet():
 task_queue = Queue()
 result_queue = Queue()
 total_order_queue = Queue()
-check_order_queue = Queue()
+check_order_status_queue = Queue()
 
 
 def return_send_order_queue():
@@ -247,7 +247,7 @@ def return_send_order_queue():
 
 
 def return_rece_order_queue():
-    global check_order_queue
+    global check_order_status_queue
     return check_order_queue
 
 

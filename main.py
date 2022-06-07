@@ -9,7 +9,7 @@ from MiniFramework import *
 import os
 import time
 from Model.vgg import *
-
+from Model.Resnet import *
 # class AlexNet(NeuralNet):
 #     def __init__(self, params, model_name):
 #         super().__init__(params, model_name)
@@ -223,7 +223,7 @@ def model():
 if __name__ == '__main__':
     time1 = time.time()
     num_output = 10
-    max_epoch = 75
+    max_epoch = 50
     batch_size = 128
     learning_rate = 0.001
     params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
@@ -232,9 +232,10 @@ if __name__ == '__main__':
     # net=model()
     # net = model1()
     # net.distributed_load_parameters()
-    net = VGG(param=params, vgg_name="VGG11")
+    # net = VGG(param=params, vgg_name="VGG11")
+    net = ResNet(params=params, model_name="ResNet", block=BasicBlock, num_blocks=[2, 2, 2, 2])
     print("start")
-    net.train(dataReader, checkpoint=0.05, need_test=True)
+    net.train(dataReader, checkpoint=0.05, need_test=True, file_name="resnet_single.csv")
     print("end")
     time2 = time.time()
     print(f"total time: {time2 - time1}")

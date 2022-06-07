@@ -204,10 +204,7 @@ class CIFAR10DataReader(object):
 
     def data_split(self, num_worker: int):
         start = 0
-        if self.order != len(self.XTrain):
-            training_order = self.order[0:len(self.XTrain)]
-        else:
-            training_order = self.order
+        training_order = self.order[self.num_validation:]
         current = int(len(training_order) / num_worker)
         data_set = []
         for i in range(num_worker):

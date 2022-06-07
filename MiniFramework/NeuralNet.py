@@ -55,6 +55,7 @@ class NeuralNet(object):
             delta_out = layer.backward(delta_in, i)
             delta_in = delta_out
 
+
     def __update(self):
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
@@ -93,7 +94,7 @@ class NeuralNet(object):
                 time3 = time.time()
                 # final update w,b
                 self.__update()
-                self.accuracy_cal(batch_x, batch_y, epoch, iteration)
+                # self.accuracy_cal(batch_x, batch_y, epoch, iteration)
                 time4 = time.time()
                 print(f"iteration {iteration} , forward time: {time2 - time1}, "
                       f"backward time: {time3 - time2}, update time: {time4 - time3},total time: {time4 - time1}")

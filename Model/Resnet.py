@@ -15,51 +15,93 @@ def con1x1(in_planes: int, out_planes: int, param, stride: int = 1, ) -> MiniFra
 class BasicBlock(MiniFramework.NeuralNet):
     expansion = 1
 
-    def __init__(self, in_planes, planes, stride, param, layer_name, downsample: dict = None):
+    def __init__(self, in_planes, planes, stride, param, layer_name):
         super().__init__(param, layer_name)
-
         self.add_layer(conv3x3(in_planes, planes, param=param, stride=stride), layer_name + "_con1")
         self.add_layer(BatchNormalLayer(planes), layer_name + "_bn1")
         self.add_layer(ReLU(), layer_name + "_relu1")
         self.add_layer(conv3x3(in_planes, planes, param=param), layer_name + "_con2")
         self.add_layer(BatchNormalLayer(planes), layer_name + "_bn2")
-        self.downsample = downsample
-        if self.downsample is not None:
-            self.downsample_status = True
-            for name in list(downsample.keys()):
-                self.add_layer(downsample[name], layer_name + "_" + name)
+        if stride != 1 or in_planes != planes * self.expansion:
+            self.shortcut = Shortcut(in_planes, planes, self.expansion, stride, param=param, layer_name=layer_name)
         else:
-            self.downsample_status = False
+            self.shortcut = 0
+        self.add_layer(Add(), layer_name + "_add")
         self.add_layer(ReLU(), layer_name + "_relu2")
         self.stride = stride
 
     def forward(self, input_v, train=True):
         output = None
-        residual = input_v
-        layer_name: str = self.layer_list[0].iteration_count
-        if self.downsample_status is True:
-            for i in range(self.layer_count):
-                if layer_name[-15:] == "_downsample_con":
-                    residual = self.layer_list[i].forward(input_v, train)
-                if layer_name[-14:] == "_downsample_bn":
-                    residual = self.layer_list[i].forward(residual, train)
-                    output = output + residual
+        if isinstance(self.shortcut, Shortcut):
+            residual = self.shortcut.forward(input_v, train)
+        else:
+            residual = input_v
+        for i in range(self.layer_count):
+            try:
+                if isinstance(self.layer_list[i], Add):
+                    output = self.layer_list[i].forward(input_v, residual, train)
                 else:
                     output = self.layer_list[i].forward(input_v, train)
-        else:
-            for j in range(self.layer_count):
-                output = self.layer_list[j].forward(input_v, train)
-                if layer_name[-4:] == "_bn2":
-                    output = output + residual
+            except Exception as ex:
+                print(ex)
+            input_v = output
         self.output_v = output
         return self.output_v
 
-    def backward(self, X, Y):
+    def backward(self, Y):
+        shortcut_delta_out = None
+        delta_out = None
+        delta_in = self.output_v - Y
+        for i in range(self.layer_count - 1, -1, -1):
+            layer = self.layer_list[i]
+            if isinstance(self.layer_list[i], Add):
+                delta_out = layer.backward(delta_in, i)
+                if isinstance(self.shortcut, Shortcut):
+                    shortcut_delta_out = self.shortcut.backward(delta_out[1])
+                else:
+                    shortcut_delta_out = delta_out[1]
+                delta_out = delta_out[0]
+            else:
+                delta_out = layer.backward(delta_in, i)
+            delta_in = delta_out
+        delta_out = delta_out + shortcut_delta_out
+        return delta_out
+
+    def update(self):
+        for i in range(self.layer_count - 1, -1, -1):
+            layer = self.layer_list[i]
+            layer.update()
+        if isinstance(self.shortcut, Shortcut):
+            self.shortcut.update()
+
+
+class Shortcut(NeuralNet):
+    def __init__(self, in_planes: int, planes: int, expansion: int, stride: int, param, layer_name):
+        super().__init__(param, layer_name)
+        self.add_layer(ConLayer(in_planes, planes * expansion, kernel_size=1, stride=stride,
+                 hp=self.hp), name=layer_name+"_shortcut_con")
+        self.add_layer(BatchNormalLayer(planes * expansion), name="_shortcut_bn")
+
+    def forward(self, input_v, train):
+        output = None
+        for i in range(self.layer_count):
+            try:
+                output = self.layer_list[i].forward(input_v, train)
+            except:
+                print(i)
+            input_v = output
+
+        self.output_v = output
+        return self.output_v
+
+    def backward(self, Y):
         delta_in = self.output_v - Y
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
             delta_out = layer.backward(delta_in, i)
             delta_in = delta_out
+        delta_out = delta_in
+        return delta_out
 
     def update(self):
         for i in range(self.layer_count - 1, -1, -1):
@@ -72,9 +114,9 @@ class ResNet(MiniFramework.NeuralNet):
         self.in_planes = 64
         self.hp = params
         super(ResNet, self).__init__(params, model_name)
-        self.add_layer(ConLayer(32, 64, 3, stride=1, padding=1, hp=params), name="con1")
+        self.add_layer(ConLayer(3, 64, 3, stride=1, padding=1, hp=params), name="con1")
         self.add_layer(BatchNormalLayer(64), name='bn1')
-        self.add_layer(ActivationLayer(ReLU()), name='relu1')
+        self.add_layer(ReLU(), name='relu1')
         # self.add_layer(PoolingLayer(kernel_size=3, stride=3, padding=1),iteration_count='pool')
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1, layer_name="block1")
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2, layer_name="block2")
@@ -84,21 +126,45 @@ class ResNet(MiniFramework.NeuralNet):
         self.add_layers(self.layer2, name="block2")
         self.add_layers(self.layer3, name="block3")
         self.add_layers(self.layer4, name="block4")
+        self.add_layer(PoolingLayer(4, pooling_type=PoolingTypes.MEAN), name="avgpool")
+        self.add_layer(FCLayer(512 * block.expansion, num_classes, hp=params), name="fc1")
+        self.add_layer(Softmax(), name="softmax1")
 
     def _make_layer(self, block, planes, num_blocks, stride=1, layer_name=None):
         strides = [stride] + [1] * (num_blocks - 1)
-        downsample = None
-        if stride != 1 or self.in_planes != planes * block.expansion:
-            downsample = {
-                "_downsample_con": ConLayer(self.in_planes, planes * block.expansion, kernel_size=1, stride=stride,
-                                            hp=self.hp),
-                "_downsample_bn": BatchNormalLayer(planes * block.expansion)}
-
         layers = []
         for stride in strides:
-            layers.append(block(self.in_planes, planes, stride, self.hp, layer_name, downsample))
+            layers.append(block(self.in_planes, planes, stride, self.hp, layer_name))
             self.in_planes = planes * block.expansion
         return layers
+
+    def forward(self, input_v, train=True):
+        output = None
+        for i in range(self.layer_count):
+            output = self.layer_list[i].forward(input_v, train)
+            input_v = output
+
+        self.output_v = output
+        return self.output_v
+
+    def backward(self, Y):
+        delta_in = self.output_v - Y
+        for i in range(self.layer_count - 1, -1, -1):
+            layer = self.layer_list[i]
+            delta_out = layer.backward(delta_in, i)
+            delta_in = delta_out
+
+    # def __pre_update(self):
+    #     for i in range(self.layer_count - 1, -1, -1):
+    #         layer = self.layer_list[i]
+    #         layer.pre_update()
+
+    def update(self):
+        for i in range(self.layer_count - 1, -1, -1):
+            layer = self.layer_list[i]
+            layer.update()
+
+
 
 
 if __name__ == "__main__":
@@ -109,4 +175,8 @@ if __name__ == "__main__":
                              optimizer_name=OptimizerName.Momentum)
 
     net = ResNet(params=params, model_name="ResNet", block=BasicBlock, num_blocks=[2, 2, 2, 2])
+    x = np.random.rand(2, 3, 32, 32)
+    net.forward(x)
+    Y = np.random.randint(0,10,[2,10])
+    net.backward(Y)
     print("resnet")

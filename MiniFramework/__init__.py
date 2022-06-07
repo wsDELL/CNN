@@ -18,5 +18,6 @@ from MiniFramework.Layer import *
 from MiniFramework.ConWeightBias import *
 from MiniFramework.TrainingHistory import *
 from MiniFramework.CIFAR10DataReader import *
+from MiniFramework.AddLayer import *
 
 
