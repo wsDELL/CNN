@@ -60,9 +60,7 @@ class CIFAR10DataReader(object):
 
     def __NormalizeData(self, XRawData):
         X_New = np.zeros(XRawData.shape).astype('float32')
-        x_max = np.max(XRawData)
-        x_min = np.min(XRawData)
-        X_New = (XRawData - x_min) / (x_max - x_min)
+        X_New = self.__z_score_normalize(XRawData)
         return X_New
 
     def __max_min_normalize(self, XRawData):

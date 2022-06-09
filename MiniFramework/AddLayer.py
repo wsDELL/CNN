@@ -17,6 +17,6 @@ class Add(layer):
         return result
 
     @staticmethod
-    def backward(delta_in):
+    def backward(delta_in,idx):
         res = [delta_in, delta_in]
         return res

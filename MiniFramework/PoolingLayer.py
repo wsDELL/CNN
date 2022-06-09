@@ -46,22 +46,29 @@ class PoolingLayer(layer):
         col = img2col(input_v, self.pool_height, self.pool_width, self.stride, self.padding)
         col_x = col.reshape(-1, self.pool_height * self.pool_width)
         self.arg_max = np.argmax(col_x, axis=1)
-        if self.pooling_type == PoolingType.MAX:
+        if self.pooling_type == PoolingTypes.MAX:
             out1 = np.max(col_x, axis=1)
-        elif self.pooling_type == PoolingType.MEAN:
+        elif self.pooling_type == PoolingTypes.MEAN:
             out1 = np.mean(col_x, axis=1)
-        else:
-            out1 = np.max(col_x, axis=1)
+        # else:
+        #     out1 = np.max(col_x, axis=1)
         out2 = out1.reshape(N, self.output_height, self.output_width, C)
         self.output_v = np.transpose(out2, axes=(0, 3, 1, 2))
         return self.output_v
 
     def backward_col2img(self, delta_in: np.ndarray, layer_idx):
         dout = np.transpose(delta_in, (0, 2, 3, 1))
-        dmax = np.zeros((dout.size, self.pool_size)).astype('float32')
-        dmax[np.arange(self.arg_max.size), self.arg_max.flatten()] = dout.flatten()
-        dmax = dmax.reshape(dout.shape + (self.pool_size,))
-        dcol = dmax.reshape(dmax.shape[0] * dmax.shape[1] * dmax.shape[2], -1)
+        dcol = None
+        if self.pooling_type == PoolingTypes.MAX:
+            dmax = np.zeros((dout.size, self.pool_size)).astype('float32')
+            dmax[np.arange(self.arg_max.size), self.arg_max.flatten()] = dout.flatten()
+            dmax = dmax.reshape(dout.shape + (self.pool_size,))
+            dcol = dmax.reshape(dmax.shape[0] * dmax.shape[1] * dmax.shape[2], -1)
+        elif self.pooling_type == PoolingTypes.MEAN:
+            dmean = np.ones((dout.size, self.pool_size)).astype('float32')
+            dmean = dmean * (dout.flatten()/self.pool_size).reshape(-1, 1)
+            dmean = dmean.reshape(dout.shape + (self.pool_size,))
+            dcol = dmean.reshape(dmean.shape[0] * dmean.shape[1] * dmean.shape[2], -1)
         dx = col2img(dcol, self.input_v.shape, self.pool_height, self.pool_width, self.stride, 0, self.output_height,
                      self.output_width)
         return dx

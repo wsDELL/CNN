@@ -79,6 +79,8 @@ class NeuralNet(object):
         for epoch in range(self.hp.max_epoch):
             dataReader.training_Shuffle()
             for iteration in range(max_iteration):
+                if iteration == 8:
+                    print(iteration)
                 # get x and y value for one sample
                 batch_x, batch_y = dataReader.GetBatchTrainSamples(self.hp.batch_size, iteration)
                 # for optimizers which need pre-update weights

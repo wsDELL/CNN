@@ -97,7 +97,7 @@ def LoadData():
     mdr = CIFAR10DataReader(train_x, train_y, test_x, test_y)
     # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
     mdr.ReadData()
-    mdr.training_Shuffle()
+    mdr.total_Shuffle()
     mdr.GenerateValidationSet(k=12)
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
@@ -227,13 +227,13 @@ if __name__ == '__main__':
     batch_size = 128
     learning_rate = 0.001
     params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
-                             optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
+                             optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0001)
     dataReader = LoadData()
     # net=model()
     # net = model1()
     # net.distributed_load_parameters()
     # net = VGG(param=params, vgg_name="VGG11")
-    net = ResNet(params=params, model_name="ResNet", block=BasicBlock, num_blocks=[2, 2, 2, 2])
+    net = Resnet_cifar10(params=params, model_name="ResNet_cifar10", block=BasicBlock, num_blocks=[2, 2, 2])
     print("start")
     net.train(dataReader, checkpoint=0.05, need_test=True, file_name="resnet_single.csv")
     print("end")

@@ -20,7 +20,7 @@ class BasicBlock(MiniFramework.NeuralNet):
         self.add_layer(conv3x3(in_planes, planes, param=param, stride=stride), layer_name + "_con1")
         self.add_layer(BatchNormalLayer(planes), layer_name + "_bn1")
         self.add_layer(ReLU(), layer_name + "_relu1")
-        self.add_layer(conv3x3(in_planes, planes, param=param), layer_name + "_con2")
+        self.add_layer(conv3x3(planes, planes, param=param), layer_name + "_con2")
         self.add_layer(BatchNormalLayer(planes), layer_name + "_bn2")
         if stride != 1 or in_planes != planes * self.expansion:
             self.shortcut = Shortcut(in_planes, planes, self.expansion, stride, param=param, layer_name=layer_name)
@@ -48,7 +48,7 @@ class BasicBlock(MiniFramework.NeuralNet):
         self.output_v = output
         return self.output_v
 
-    def backward(self, Y):
+    def backward(self, Y, idx):
         shortcut_delta_out = None
         delta_out = None
         delta_in = self.output_v - Y
@@ -57,7 +57,7 @@ class BasicBlock(MiniFramework.NeuralNet):
             if isinstance(self.layer_list[i], Add):
                 delta_out = layer.backward(delta_in, i)
                 if isinstance(self.shortcut, Shortcut):
-                    shortcut_delta_out = self.shortcut.backward(delta_out[1])
+                    shortcut_delta_out = self.shortcut.backward(delta_out[1],i)
                 else:
                     shortcut_delta_out = delta_out[1]
                 delta_out = delta_out[0]
@@ -79,7 +79,7 @@ class Shortcut(NeuralNet):
     def __init__(self, in_planes: int, planes: int, expansion: int, stride: int, param, layer_name):
         super().__init__(param, layer_name)
         self.add_layer(ConLayer(in_planes, planes * expansion, kernel_size=1, stride=stride,
-                 hp=self.hp), name=layer_name+"_shortcut_con")
+                                hp=self.hp), name=layer_name + "_shortcut_con")
         self.add_layer(BatchNormalLayer(planes * expansion), name="_shortcut_bn")
 
     def forward(self, input_v, train):
@@ -94,7 +94,7 @@ class Shortcut(NeuralNet):
         self.output_v = output
         return self.output_v
 
-    def backward(self, Y):
+    def backward(self, Y, idx):
         delta_in = self.output_v - Y
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
@@ -134,6 +134,58 @@ class ResNet(MiniFramework.NeuralNet):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
+            layers.append(block(self.in_planes, planes, stride, self.hp, layer_name+f"_{stride}"))
+            self.in_planes = planes * block.expansion
+        return layers
+
+    def forward(self, input_v, train=True):
+        output = None
+        for i in range(self.layer_count):
+            output = self.layer_list[i].forward(input_v, train)
+            input_v = output
+
+        self.output_v = output
+        return self.output_v
+
+    def backward(self, Y):
+        delta_in = self.output_v - Y
+        for i in range(self.layer_count - 1, -1, -1):
+            layer = self.layer_list[i]
+            delta_out = layer.backward(delta_in, i)
+            delta_in = delta_out
+
+    # def __pre_update(self):
+    #     for i in range(self.layer_count - 1, -1, -1):
+    #         layer = self.layer_list[i]
+    #         layer.pre_update()
+
+    def update(self):
+        for i in range(self.layer_count - 1, -1, -1):
+            layer = self.layer_list[i]
+            layer.update()
+
+
+class Resnet_cifar10(NeuralNet):
+    def __init__(self, params, block, num_blocks, num_classes=10, model_name=None):
+        super(Resnet_cifar10, self).__init__(params, model_name)
+        self.in_planes = 16
+        self.add_layer(ConLayer(3, 16, 3, stride=1, padding=0, hp=params), name="con1")
+        self.add_layer(BatchNormalLayer(16), name='bn1')
+        self.add_layer(ReLU(), name='relu1')
+        self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1, layer_name="block1")
+        self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2, layer_name="block2")
+        self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2, layer_name="block3")
+        self.add_layers(self.layer1, name="block1")
+        self.add_layers(self.layer2, name="block2")
+        self.add_layers(self.layer3, name="block3")
+        self.add_layer(PoolingLayer(8, pooling_type=PoolingTypes.MEAN), name="avgpool")
+        self.add_layer(FCLayer(64, num_classes, hp=params), name="fc1")
+        self.add_layer(Softmax(), name="softmax1")
+
+    def _make_layer(self, block, planes, num_blocks, stride=1, layer_name=None):
+        strides = [stride] + [1] * (num_blocks - 1)
+        layers = []
+        for stride in strides:
             layers.append(block(self.in_planes, planes, stride, self.hp, layer_name))
             self.in_planes = planes * block.expansion
         return layers
@@ -165,8 +217,6 @@ class ResNet(MiniFramework.NeuralNet):
             layer.update()
 
 
-
-
 if __name__ == "__main__":
     max_epoch = 5
     batch_size = 128
@@ -175,8 +225,11 @@ if __name__ == "__main__":
                              optimizer_name=OptimizerName.Momentum)
 
     net = ResNet(params=params, model_name="ResNet", block=BasicBlock, num_blocks=[2, 2, 2, 2])
+    net1 = Resnet_cifar10(params=params, model_name="ResNet_cifar10", block=BasicBlock, num_blocks=[2, 2, 2])
+
     x = np.random.rand(2, 3, 32, 32)
-    net.forward(x)
-    Y = np.random.randint(0,10,[2,10])
-    net.backward(Y)
+    net1.forward(x)
+    Y = np.random.randint(0, 10, [2, 10])
+    net1.backward(Y)
+    net1.update()
     print("resnet")
