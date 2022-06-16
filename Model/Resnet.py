@@ -48,16 +48,16 @@ class BasicBlock(MiniFramework.NeuralNet):
         self.output_v = output
         return self.output_v
 
-    def backward(self, Y, idx):
+    def backward(self, delta_in, idx):
         shortcut_delta_out = None
         delta_out = None
-        delta_in = self.output_v - Y
+        # delta_in = self.output_v - Y
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
             if isinstance(self.layer_list[i], Add):
                 delta_out = layer.backward(delta_in, i)
                 if isinstance(self.shortcut, Shortcut):
-                    shortcut_delta_out = self.shortcut.backward(delta_out[1],i)
+                    shortcut_delta_out = self.shortcut.backward(delta_out[1], i)
                 else:
                     shortcut_delta_out = delta_out[1]
                 delta_out = delta_out[0]
@@ -73,6 +73,85 @@ class BasicBlock(MiniFramework.NeuralNet):
             layer.update()
         if isinstance(self.shortcut, Shortcut):
             self.shortcut.update()
+
+
+class BasicBlock1(MiniFramework.NeuralNet):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride, param, layer_name, downsample=None):
+        super().__init__(param, layer_name)
+        self.add_layer(conv3x3(in_planes, planes, param=param, stride=stride), layer_name + "_con1")
+        self.add_layer(BatchNormalLayer(planes), layer_name + "_bn1")
+        self.add_layer(ReLU(), layer_name + "_relu1")
+        self.add_layer(conv3x3(planes, planes, param=param), layer_name + "_con2")
+        self.add_layer(BatchNormalLayer(planes), layer_name + "_bn2")
+        self.shortcut = downsample
+        self.add_layer(Add(), layer_name + "_add")
+        self.add_layer(ReLU(), layer_name + "_relu2")
+        self.stride = stride
+
+    def forward(self, input_v, train=True):
+        output = None
+        if isinstance(self.shortcut, Shortcut):
+            residual = self.shortcut.forward(input_v, train)
+        else:
+            residual = input_v
+        for i in range(self.layer_count):
+            try:
+                if isinstance(self.layer_list[i], Add):
+                    output = self.layer_list[i].forward(input_v, residual, train)
+                else:
+                    output = self.layer_list[i].forward(input_v, train)
+            except Exception as ex:
+                print(ex)
+            input_v = output
+        self.output_v = output
+        return self.output_v
+
+    def backward(self, delta_in, idx):
+        shortcut_delta_out = None
+        delta_out = None
+        # delta_in = self.output_v - Y
+        for i in range(self.layer_count - 1, -1, -1):
+            layer = self.layer_list[i]
+            if isinstance(self.layer_list[i], Add):
+                delta_out = layer.backward(delta_in, i)
+                if isinstance(self.shortcut, Shortcut):
+                    shortcut_delta_out = self.shortcut.backward(delta_out[1], i)
+                else:
+                    shortcut_delta_out = delta_out[1]
+                delta_out = delta_out[0]
+            else:
+                delta_out = layer.backward(delta_in, i)
+            delta_in = delta_out
+        delta_out = delta_out + shortcut_delta_out
+        return delta_out
+
+    def update(self):
+        for i in range(self.layer_count - 1, -1, -1):
+            layer = self.layer_list[i]
+            layer.update()
+        if isinstance(self.shortcut, Shortcut):
+            self.shortcut.update()
+
+
+class Bottleneck(NeuralNet):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride, param, layer_name):
+        super().__init__(param, layer_name)
+        self.add_layer(conv3x3(in_planes, planes, param=param, stride=stride), layer_name + "_con1")
+        self.add_layer(BatchNormalLayer(planes), layer_name + "_bn1")
+        self.add_layer(ReLU(), layer_name + "_relu1")
+        self.add_layer(conv3x3(planes, planes, param=param), layer_name + "_con2")
+        self.add_layer(BatchNormalLayer(planes), layer_name + "_bn2")
+        if stride != 1 or in_planes != planes * self.expansion:
+            self.shortcut = Shortcut(in_planes, planes, self.expansion, stride, param=param, layer_name=layer_name)
+        else:
+            self.shortcut = 0
+        self.add_layer(Add(), layer_name + "_add")
+        self.add_layer(ReLU(), layer_name + "_relu2")
+        self.stride = stride
 
 
 class Shortcut(NeuralNet):
@@ -94,8 +173,8 @@ class Shortcut(NeuralNet):
         self.output_v = output
         return self.output_v
 
-    def backward(self, Y, idx):
-        delta_in = self.output_v - Y
+    def backward(self, delta_in, idx):
+
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
             delta_out = layer.backward(delta_in, i)
@@ -134,7 +213,7 @@ class ResNet(MiniFramework.NeuralNet):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_planes, planes, stride, self.hp, layer_name+f"_{stride}"))
+            layers.append(block(self.in_planes, planes, stride, self.hp, layer_name + f"_{stride}"))
             self.in_planes = planes * block.expansion
         return layers
 
@@ -215,6 +294,16 @@ class Resnet_cifar10(NeuralNet):
         for i in range(self.layer_count - 1, -1, -1):
             layer = self.layer_list[i]
             layer.update()
+
+    def _make_layers(self, block, planes, num_blocks, stride=1, layer_name=None):
+        downsample = None
+        if (stride != 1) or (self.in_planes != planes):
+            downsample = Shortcut(self.in_planes, planes, stride=stride, param=self.hp, layer_name=layer_name)
+        layers = [block(self.in_planes, planes, stride, downsample)]
+        self.in_planes = planes
+        for i in range(1, num_blocks):
+            layers.append(block(planes, planes))
+        return layers
 
 
 if __name__ == "__main__":

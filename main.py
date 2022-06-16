@@ -232,8 +232,9 @@ if __name__ == '__main__':
     # net=model()
     # net = model1()
     # net.distributed_load_parameters()
-    # net = VGG(param=params, vgg_name="VGG11")
-    net = Resnet_cifar10(params=params, model_name="ResNet_cifar10", block=BasicBlock, num_blocks=[2, 2, 2])
+    net = VGG(param=params, vgg_name="VGG11")
+
+    # net = Resnet_cifar10(params=params, model_name="ResNet_cifar10", block=BasicBlock, num_blocks=[2, 2, 2])
     print("start")
     net.train(dataReader, checkpoint=0.05, need_test=True, file_name="resnet_single.csv")
     print("end")

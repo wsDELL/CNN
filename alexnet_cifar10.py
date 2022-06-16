@@ -52,7 +52,7 @@ def LoadData():
     mdr = CIFAR10DataReader(train_x, train_y, test_x, test_y)
     # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
     mdr.ReadData()
-    mdr.training_Shuffle()
+    mdr.total_Shuffle()
     mdr.GenerateValidationSet(k=12)
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
@@ -73,13 +73,13 @@ if __name__ == '__main__':
     num_output = 10
     max_epoch = 100
     batch_size = 128
-    learning_rate = 0.005
+    learning_rate = 0.01
     params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
-                             optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0005)
+                             optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0001)
     dataReader = LoadData()
     net = AlexNet(param=params, model_name="Alexnet")
     print("start")
-    net.train(dataReader, checkpoint=0.1, need_test=True, file_name="alexnet_loss_data5.csv")
+    net.train(dataReader, checkpoint=0.1, need_test=True, file_name="alexnet_loss_data6.csv")
     print("end")
     time2 = time.time()
     print(f"total time: {time2 - time1}")

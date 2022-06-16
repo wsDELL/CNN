@@ -27,6 +27,18 @@ def calculate_gain(nonlinearity, param=None):
         raise ValueError("Unsupported nonlinearity {}".format(nonlinearity))
 
 
+def _calculate_fan_in_and_fan_out(shape):
+    assert (len(shape) == 4)
+    num_input = shape[1]
+    num_output = shape[0]
+    receptive_field_size = 1
+    for i in shape[2:]:
+        receptive_field_size *= i
+    fan_in = num_input * receptive_field_size
+    fan_out = num_output * receptive_field_size
+    return fan_in, fan_out
+
+
 class ConWeightBias(WeightsBias):
     def __init__(self, input_c, output_c, filter_w, filter_h, optimizer_name, eta,
                  init_method=InitialMethod.Kaiming_Normal):
@@ -55,7 +67,7 @@ class ConWeightBias(WeightsBias):
         self.dB = np.zeros(self.B.shape).astype('float32')
 
     def CreateNew(self):
-        self.W = ConWeightBias.InitialConvParameters(self.WBShape, self.init_method)
+        self.W = ConWeightBias.InitialConvParameters(self.WBShape, a=math.sqrt(5), init_method=self.init_method)
         self.B = np.zeros((self.FilterCount, 1)).astype('float32')
 
     def Rotate180(self):
@@ -74,7 +86,8 @@ class ConWeightBias(WeightsBias):
         self.dB = self.dB / m
 
     @staticmethod
-    def InitialConvParameters(shape, init_method=InitialMethod.Kaiming_Normal, nonlinearity='conv2d'):
+    def InitialConvParameters(shape, a=math.sqrt(5), init_method=InitialMethod.Kaiming_Normal,
+                              nonlinearity='leaky_relu'):
         assert (len(shape) == 4)
         num_input = shape[1]
         num_output = shape[0]
@@ -86,7 +99,7 @@ class ConWeightBias(WeightsBias):
         elif init_method == InitialMethod.Normal:
             Weight = np.random.normal(shape).astype('float32')
         elif init_method == InitialMethod.MSRA:
-            Weight = np.random.normal(0, np.sqrt(2 / num_input * num_output), shape).astype('float32')
+            Weight = np.random.normal(0, np.sqrt(2.0 / num_input * num_output), shape).astype('float32')
         elif init_method == InitialMethod.Xavier_Uniform:
             gain = calculate_gain(nonlinearity)
             t = gain * math.sqrt(6.0 / float(num_output + num_input))
@@ -96,12 +109,14 @@ class ConWeightBias(WeightsBias):
             t = gain * math.sqrt(2.0 / float(num_output + num_input))
             Weight = np.random.normal(0., t, shape).astype('float32')
         elif init_method == InitialMethod.Kaiming_Uniform:
-            gain = calculate_gain(nonlinearity)
-            std = gain / math.sqrt(num_input)
+            gain = calculate_gain(nonlinearity, param=a)
+            fan_in, _ = _calculate_fan_in_and_fan_out(shape)
+            std = gain / math.sqrt(fan_in)
             bound = math.sqrt(3.0) * std
             Weight = np.random.uniform(-bound, bound, shape).astype('float32')
         elif init_method == InitialMethod.Kaiming_Normal:
-            gain = calculate_gain(nonlinearity)
-            std = gain / math.sqrt(num_input)
-            Weight = np.random.normal(0, std, shape).astype('float32')
+            gain = calculate_gain(nonlinearity, param=a)
+            fan_in, _ = _calculate_fan_in_and_fan_out(shape)
+            std = gain / math.sqrt(fan_in)
+            Weight = np.random.normal(0., std, shape).astype('float32')
         return Weight

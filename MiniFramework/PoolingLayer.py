@@ -6,7 +6,7 @@ from MiniFramework.Enums import *
 
 
 class PoolingLayer(layer):
-    def __init__(self, kernel_size: int, stride=1, padding=0, pooling_type=PoolingType.MAX, layer_type='Pooling layer'):
+    def __init__(self, kernel_size: int, stride=1, padding=0, pooling_type=PoolingTypes.MAX, layer_type='Pooling layer'):
         super().__init__(layer_type)
 
         self.stride = stride

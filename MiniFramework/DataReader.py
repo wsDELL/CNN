@@ -180,3 +180,8 @@ class DataReader(object):
         YP = self.YTrain[new_order,:]
         self.XTrain = XP
         self.YTrain = YP
+
+
+    def __iter__(self):
+        pass
+

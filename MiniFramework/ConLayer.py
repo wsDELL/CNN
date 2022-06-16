@@ -8,7 +8,7 @@ from MiniFramework.MnistDataReader import *
 
 class ConLayer(layer):
     def __init__(self, in_planes, out_planes, kernel_size: int, hp, layer_type='', stride=1, padding=0,
-                 init_method=InitialMethod.Kaiming_Normal):
+                 init_method=InitialMethod.Kaiming_Uniform):
         super().__init__(layer_type)
         self.input_channel = in_planes
         # self.input_width = input_shape[1]
@@ -29,7 +29,7 @@ class ConLayer(layer):
 
     def initialize(self, folder, name, create_new=True):
         self.WB = ConWeightBias(self.input_channel, self.output_channel, self.filter_height, self.filter_width,
-                                 self.hp.optimizer_name, self.hp.lr,init_method=self.init_method)
+                                self.hp.optimizer_name, self.hp.lr, init_method=self.init_method)
         self.WB.initialize(folder, name, create_new)
         self.name = name
 

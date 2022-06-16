@@ -8,7 +8,9 @@ from MiniFramework.HyperParameter import *
 
 
 class FCLayer(layer):
-    def __init__(self, input_n, output_n, hp, init_method=InitialMethod.Kaiming_Normal):
+    def __init__(self, input_n, output_n, hp, init_method=InitialMethod.Kaiming_Normal,layer_type="Fully connected "
+                                                                                                  "layer"):
+        super().__init__(layer_type)
         self.input_num = input_n
         self.output_num = output_n
         self.WB = WeightsBias(self.input_num, self.output_num,  hp.optimizer_name, hp.lr,init_method=init_method)
