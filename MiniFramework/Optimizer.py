@@ -99,18 +99,18 @@ class Adam(Optimizer):
         self.lr = lr
         self.p1 = 0.9
         self.p2 = 0.999
-        self.eps = 1e-3
-        self.t = 0
-        self.m = 0
-        self.v = 0
+        self.eps = 1e-8
+        self.t = 0.0
+        self.m = 0.0
+        self.v = 0.0
 
     def update(self, theta, grad):
-        self.t = self.t + 1
-        self.m = self.p1 * self.m + (1 - self.p1) * grad
+        self.t = self.t + 1.0
+        self.m = self.p1 * self.m + (1.0 - self.p1) * grad
         i = np.multiply(grad, grad)
-        self.v = self.p2 * self.v + (1 - self.p2) * i
-        m_hat = self.m / (1 - self.p1 ** self.t)
-        v_hat = self.v / (1 - self.p2 ** self.t)
+        self.v = self.p2 * self.v + (1.0 - self.p2) * i
+        m_hat = self.m / (1.0 - self.p1 ** self.t)
+        v_hat = self.v / (1.0 - self.p2 ** self.t)
         d_theta = self.lr * m_hat / (self.eps + np.sqrt(v_hat))
         theta = theta - d_theta
         return theta

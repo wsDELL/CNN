@@ -12,6 +12,7 @@ class TrainingHistory(object):
         self.epoch_seq = []
         self.val_loss = []
         self.val_accuracy = []
+        self.test_accuracy=[]
         self.counter = 0
 
         self.early_stop = need_earlyStop
@@ -52,6 +53,14 @@ class TrainingHistory(object):
                 if self.patience_counter >= self.patience:
                     return True
         return False
+
+    def Add_train_test(self, epoch, total_iteration, training_loss, training_accuracy,accuracy):
+        self.iteration_seq.append(total_iteration)
+        self.epoch_seq.append(epoch)
+        self.training_loss.append(training_loss)
+        self.training_accuracy.append(training_accuracy)
+        self.test_accuracy.append(accuracy)
+
 
     def ShowLossHistory(self, title, xcoord, xmin=None, xmax=None, ymin=None, ymax=None):
         fig = plt.figure(figsize=(12, 5))

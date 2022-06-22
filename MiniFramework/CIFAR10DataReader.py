@@ -59,19 +59,16 @@ class CIFAR10DataReader(object):
         self.XTrain = self.__NormalizeData(self.XTrain)
 
     def __NormalizeData(self, XRawData):
-        X_New = np.zeros(XRawData.shape).astype('float32')
         X_New = self.__z_score_normalize(XRawData)
         return X_New
 
     def __max_min_normalize(self, XRawData):
-        X_New = np.zeros(XRawData.shape).astype('float32')
         x_max = np.max(XRawData)
         x_min = np.min(XRawData)
         X_New = (XRawData - x_min) / (x_max - x_min)
         return X_New
 
     def __z_score_normalize(self, XRawData):
-        X_New = np.zeros(XRawData.shape).astype('float32')
         x_mean = np.mean(XRawData)
         x_std = np.std(XRawData)
         X_New = (XRawData - x_mean) / x_std

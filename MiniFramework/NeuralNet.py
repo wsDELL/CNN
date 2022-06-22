@@ -105,7 +105,8 @@ class NeuralNet(object):
                 if (total_iteration + 1) % checkpoint_iteration == 0:
                     if batch_x.shape[0] < self.hp.batch_size:
                         batch_x, batch_y = dataReader.GetBatchTrainSamples(self.hp.batch_size, iteration-1)
-                    self.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
+                    # self.CheckErrorAndLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
+                    self.CheckLoss(dataReader, batch_x, batch_y, epoch, total_iteration)
                     self.SaveLossHistory(valid_count,name=file_name)
                     valid_count = valid_count + 1
                     if need_stop:
@@ -177,6 +178,23 @@ class NeuralNet(object):
             if self.hp.stopper.stop_condition == StopCondition.StopLoss and loss_vld <= self.hp.stopper.stop_value:
                 need_stop = True
         return need_stop
+
+    def CheckLoss(self,dataReader, train_x, train_y, epoch, total_iteration):
+        print("epoch=%d, total_iteration=%d" % (epoch, total_iteration))
+
+        # l1/l2 cost
+        regular_cost = self.__get_regular_cost(self.hp.regular_name)
+
+        # calculate train loss
+        self.__forward(train_x, train=False)
+        loss_train, accuracy_train = self.loss_func.CheckLoss(self.output_v, train_y)
+        loss_train = loss_train + regular_cost / train_x.shape[0]
+        print("loss_train=%.6f, accuracy_train=%f" % (loss_train, accuracy_train))
+
+        print("testing...")
+        self.accuracy = self.Test(dataReader)
+        print(self.accuracy)
+        self.loss_trace.Add_train_test(epoch, total_iteration, loss_train, accuracy_train,self.accuracy)
 
     def __get_regular_cost(self, regularName):
         if regularName != RegularMethod.L1 and regularName != RegularMethod.L2:
@@ -270,8 +288,9 @@ class NeuralNet(object):
     def SaveLossHistory(self,valid_count,name="loss_data"):
         # path = self.subfolder
 
-        name_attribute = ['epoch', 'iteration', 'training_loss', 'training_accuracy', 'validating_loss',
-                          'validating_accuracy']
+        # name_attribute = ['epoch', 'iteration', 'training_loss', 'training_accuracy', 'validating_loss',
+        #                   'validating_accuracy']
+        name_attribute = ['epoch', 'iteration', 'training_loss', 'training_accuracy','test_accuracy']
         csvFile = open(name, "a+", newline='')
         try:
             writer = csv.writer(csvFile)
@@ -280,8 +299,7 @@ class NeuralNet(object):
 
             writer.writerow(
                     [self.loss_trace.epoch_seq[valid_count], self.loss_trace.iteration_seq[valid_count], self.loss_trace.training_loss[valid_count],
-                     self.loss_trace.training_accuracy[valid_count], self.loss_trace.val_loss[valid_count],
-                     self.loss_trace.val_accuracy[valid_count]])
+                     self.loss_trace.training_accuracy[valid_count],self.loss_trace.test_accuracy[valid_count]])
         finally:
             csvFile.close()
 

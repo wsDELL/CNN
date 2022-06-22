@@ -6,9 +6,9 @@ from MiniFramework.util import *
 
 
 class BatchNormalLayer(layer):
-    def __init__(self, input_size, layer_type='Batch Normalization', momentum=0.9):
+    def __init__(self, input_size, layer_type='Batch Normalization', momentum=0.1, lr=0.01):
         super().__init__(layer_type)
-
+        self.lr = lr
         self.gamma = np.ones((1, input_size)).astype('float32')
         self.beta = np.zeros((1, input_size)).astype('float32')
         self.eps = 1e-5
@@ -38,20 +38,24 @@ class BatchNormalLayer(layer):
         if input_v.ndim == 4 and self.counter is True:
             self.input_width = input_v.shape[2]
             self.input_height = input_v.shape[3]
-            self.gamma = np.ones((1, self.input_size, self.input_width, self.input_height)).astype('float32')
-            self.beta = np.zeros((1, self.input_size, self.input_width, self.input_height)).astype('float32')
-            self.running_mean = np.zeros((1, self.input_size, self.input_width, self.input_height)).astype('float32')
-            self.running_variance = np.zeros((1, self.input_size, self.input_width, self.input_height)).astype(
+            self.gamma = np.ones((1, self.input_size, 1, 1)).astype('float32')
+            self.beta = np.zeros((1, self.input_size, 1, 1)).astype('float32')
+            self.running_mean = np.zeros((1, self.input_size, 1, 1)).astype('float32')
+            self.running_variance = np.ones((1, self.input_size, 1, 1)).astype(
                 'float32')
             self.counter = False
         self.input_v = input_v
 
         if train:
-            self.mu = np.mean(self.input_v, axis=0, keepdims=True)
-            self.x_mu = self.input_v - self.mu
-            self.variance = np.mean(self.x_mu ** 2, axis=0, keepdims=True) + self.eps
-            self.std = np.sqrt(self.variance)
-            self.norm_x = self.x_mu / self.std
+            if input_v.ndim == 4:
+                self.mu = np.mean(self.input_v, axis=(0, 2, 3), keepdims=True)
+                self.variance = np.mean((self.mu - input_v) ** 2, axis=(0, 2, 3), keepdims=True)
+            elif input_v.ndim == 2:
+                self.mu = np.mean(self.input_v, axis=0, keepdims=True)
+                self.variance = np.mean((self.mu - input_v) ** 2, axis=0, keepdims=True)
+            self.x_mu = input_v - self.mu
+            self.std = np.sqrt(self.variance + self.eps)
+            self.norm_x = (self.mu - input_v) / self.std
             self.z = self.gamma * self.norm_x + self.beta
             self.running_mean = self.momentum * self.running_mean + (1.0 - self.momentum) * self.mu
             self.running_variance = self.momentum * self.running_variance + (1.0 - self.momentum) * self.variance
@@ -81,9 +85,10 @@ class BatchNormalLayer(layer):
         else:
             return delta_out
 
-    def update(self, learning_rate=0.1):
-        self.gamma = self.gamma - learning_rate * self.d_gamma
-        self.beta = self.beta - learning_rate * self.d_beta
+    def update(self):
+
+        self.gamma = self.gamma - self.lr * self.d_gamma
+        self.beta = self.beta - self.lr * self.d_beta
 
     def save_parameters(self):
         np.savez(self.result_file_name, gamma=self.gamma, beta=self.beta,
@@ -120,7 +125,7 @@ class BatchNormalLayer(layer):
         self.d_beta = grad[self.name]['d_beta']
         running_mean = grad[self.name]['mean']
         running_variance = grad[self.name]['variance']
-        self.update_mean_and_variance(running_mean,running_variance)
+        self.update_mean_and_variance(running_mean, running_variance)
 
     def distributed_add_gradient(self, grad):
         # iteration_count = list(param.keys())

@@ -98,7 +98,7 @@ def LoadData():
     # mdr = MnistDataReader(train_x,train_y,test_x,test_y)
     mdr.ReadData()
     mdr.total_Shuffle()
-    mdr.GenerateValidationSet(k=12)
+    # mdr.GenerateValidationSet(k=12)
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
     return mdr
@@ -232,11 +232,11 @@ if __name__ == '__main__':
     # net=model()
     # net = model1()
     # net.distributed_load_parameters()
-    net = VGG(param=params, vgg_name="VGG11")
+    # net = VGG(param=params, vgg_name="VGG11")
 
-    # net = Resnet_cifar10(params=params, model_name="ResNet_cifar10", block=BasicBlock, num_blocks=[2, 2, 2])
+    net = Resnet_cifar10(params=params, model_name="ResNet_cifar10", block=BasicBlock, num_blocks=[2, 2, 2])
     print("start")
-    net.train(dataReader, checkpoint=0.05, need_test=True, file_name="resnet_single.csv")
+    net.train(dataReader, checkpoint=1, need_test=True, file_name="resnet_single.csv")
     print("end")
     time2 = time.time()
     print(f"total time: {time2 - time1}")

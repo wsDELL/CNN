@@ -1,4 +1,5 @@
 import random
+from pathlib import Path
 
 import numpy as np
 
@@ -25,6 +26,7 @@ class DataReader(object):
         self.YTestRaw = None  # test label set before normalization
         self.XDev = None  # validation feature set
         self.YDev = None  # validation lable set
+        self.order = None
 
     def ReadData(self):
         train_file = Path(self.train_file_name)
@@ -159,7 +161,7 @@ class DataReader(object):
 
     # permutation only affect along the first axis, so we need transpose the array first
     # see the comment of this class to understand the data format
-    def Shuffle(self):
+    def training_Shuffle(self):
         seed = np.random.randint(0, 100)
         np.random.seed(seed)
         order = np.random.permutation(len(self.XTrain))
@@ -167,21 +169,48 @@ class DataReader(object):
         YP = self.YTrain[order, :]
         self.XTrain = XP
         self.YTrain = YP
+        self.training_data_order = order
 
-    def data_Shuffle(self):
+    def total_Shuffle(self):
         seed = random.randint(0, 100)
         random.seed(seed)
-        order = [i for i in range(len(self.XTrain))]
+        order = [i for i in range(len(self.XTrainRaw))]
         random.shuffle(order)
-        return order
+        XP = self.XTrainRaw[order, :, :, :]
+        YP = self.YTrainRaw[order, :]
+        self.XTrain = XP
+        self.YTrain = YP
+        self.order = order
 
-    def reorder(self,new_order):
-        XP = self.XTrain[new_order,:,:,:]
-        YP = self.YTrain[new_order,:]
+    def data_split(self, num_worker: int):
+        start = 0
+        training_order = self.order[self.num_validation:]
+        current = int(len(training_order) / num_worker)
+        data_set = []
+        for i in range(num_worker):
+            if i != num_worker - 1:
+                data_set.append(training_order[start:start + current])
+                start = start + current
+            else:
+                data_set.append(training_order[start:len(training_order)])
+        return data_set
+
+    def training_reorder(self, new_order):
+        XP = self.XTrain[new_order, :, :, :]
+        YP = self.YTrain[new_order, :]
         self.XTrain = XP
         self.YTrain = YP
 
+    def total_reorder(self, new_order):
+        XP = self.XTrainRaw[new_order, :, :, :]
+        YP = self.YTrainRaw[new_order, :]
+        self.XTrain = XP
+        self.YTrain = YP
+        self.num_train = len(self.YTrain)
 
-    def __iter__(self):
-        pass
+
+
+
+
+
 
