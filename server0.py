@@ -175,6 +175,7 @@ if __name__ == '__main__':
                     grads.append(grad)
                     if len(grads) == num_worker:
                         break
+
                 for i in range(len(grads)):
                     if i == 0:
                         net.distributed_load_gradient(grads[i])

@@ -248,7 +248,7 @@ class Resnet_cifar10(NeuralNet):
     def __init__(self, params, block, num_blocks, num_classes=10, model_name=None):
         super(Resnet_cifar10, self).__init__(params, model_name)
         self.in_planes = 16
-        self.add_layer(ConLayer(3, 16, 3, stride=1, padding=1, hp=params), name="con1")
+        self.add_layer(ConLayer(3, 16, 3, stride=1, padding=0, hp=params), name="con1")
         self.add_layer(BatchNormalLayer(16), name='bn1')
         self.add_layer(ReLU(), name='relu1')
         self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1, layer_name="block1")

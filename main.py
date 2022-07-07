@@ -1,62 +1,11 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import numpy as np
-
 import MiniFramework
 from MiniFramework import *
 import os
 import time
 from Model.vgg import *
 from Model.Resnet import *
-# class AlexNet(NeuralNet):
-#     def __init__(self, params, model_name):
-#         super().__init__(params, model_name)
-#         self.add_layer(MiniFramework.ConLayer(input_shape=(1,28,28), kernal_shape=(32,3,3), hp=params, pad=1))
-#         self.add_layer(MiniFramework.PoolingLayer(layer_type="Pool", input_shape=(32,14,14),pool_shape=(2,2),stride=2))
-#         self.add_layer(MiniFramework.ReLU())
-#         self.add_layer(MiniFramework.ConLayer(input_shape=(32,14,14),kernal_shape=(64,3,3),hp=params,pad=1))
-#         self.add_layer(MiniFramework.PoolingLayer(input_shape=(64,7,7),pool_shape=(64,3,3),stride=2,layer_type='Pool'))
-#         self.add_layer(MiniFramework.ReLU())
-#         self.add_layer(MiniFramework.ConLayer(input_shape=(64,7,7), kernal_shape=(128,3,3), hp=params, pad=1))
-#         self.add_layer(MiniFramework.ConLayer(input_shape=(128,7,7), kernal_shape=(256,3,3), hp=params, pad=1))
-#         self.add_layer(MiniFramework.ConLayer(input_shape=(256,7,7), kernal_shape=(256,3,3), hp=params, pad=1))
-#         self.add_layer(MiniFramework.PoolingLayer(layer_type="Pool", input_shape=(256,7,7),pool_shape=(3,3),stride=2))
-#         self.add_layer(MiniFramework.ReLU())
-#         self.add_layer(MiniFramework.FCLayer(256*3*3,1024))
-#
-#
-#
-#
-#
-# # Press the green button in the gutter to run the script.
-# if __name__ == '__main__':
-#     hp = MiniFramework.HyperParameters()
-#     con1 = ConLayer(input_shape=(1, 28, 28), kernal_shape=(1, 3, 3), hp=hp, layer_type="CON", stride=2, pad=1)
-#     pool1 = MiniFramework.PoolingLayer(layer_type="Pool", input_shape=(1, 28, 28), pool_shape=(2, 2), stride=2)
-#     batch1 = MiniFramework.BacthNormalLayer(layer_type='batchlayer',input_size=28)
-#     activator = MiniFramework.ReLU()
-#     liner1 = MiniFramework.Softmax()
-#     drop1 = MiniFramework.DropoutLayer(layer_type='dropout', input_size=2)
-#     fclayer1 = MiniFramework.FCLayer(input_n=1*28*28,output_n=196,hp=hp)
 
-#     dataReader=MnistDataReader(train_x,train_y,test_x,test_y)
-#     dataReader.ReadData()
-#     train_X = dataReader.XTrainRaw
-#     oner = train_X[0]
-#     oner = oner[np.newaxis,:]
-#     res = con1.forward(oner)
-#     res2 = pool1.forward(oner)
-#     res3 = batch1.forward(oner)
-#     res4 = activator.forward(oner)
-#     oner1 = np.transpose(oner).reshape(1*28*28,1)
-#     res6 = drop1.forward(oner1)
-#     res5 = liner1.forward(oner1)
-#
-#     print(res.shape)
-#
-# # See PyCharm help at https://www.jetbrains.com/help/pycharm/
 train_x = "./data/MNIST/raw/train-images-idx3-ubyte"
 train_y = "./data/MNIST/raw/train-labels-idx1-ubyte"
 test_x = "./data/MNIST/raw/t10k-images-idx3-ubyte"
@@ -103,8 +52,9 @@ def LoadData():
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
     return mdr
 
+
 def LoadData1():
-    mdr = MnistDataReader(train_x,train_y,test_x,test_y)
+    mdr = MnistDataReader(train_x, train_y, test_x, test_y)
     mdr.ReadData()
     mdr.NormalizeX()
     mdr.NormalizeY(NetType.MultipleClassifier, base=0)
@@ -123,21 +73,21 @@ def model1():
 
     net = NeuralNet(params, "alexnet")
 
-    c1 = ConLayer(1, 32, kernel_size=3, hp=params, stride=1,padding=1)
+    c1 = ConLayer(1, 32, kernel_size=3, hp=params, stride=1, padding=1)
     net.add_layer(c1, "c1")
     p1 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p1, "p1")
     r1 = ReLU()
     net.add_layer(r1, "relu1")
 
-    c2 = ConLayer(32, 64, kernel_size=3, hp=params, stride=1,padding=1)
+    c2 = ConLayer(32, 64, kernel_size=3, hp=params, stride=1, padding=1)
     net.add_layer(c2, "c2")
     p2 = PoolingLayer(kernel_size=2, stride=2, pooling_type=PoolingTypes.MAX)
     net.add_layer(p2, "p2")
     r2 = ReLU()
     net.add_layer(r2, "relu2")
 
-    c3 = ConLayer(64, 128, kernel_size=3, hp=params, stride=1,padding=1)
+    c3 = ConLayer(64, 128, kernel_size=3, hp=params, stride=1, padding=1)
     net.add_layer(c3, "c3")
     # r3 = ReLU()
     # net.add_layer(r3, "relu3")
@@ -224,8 +174,8 @@ if __name__ == '__main__':
     time1 = time.time()
     num_output = 10
     max_epoch = 50
-    batch_size = 128
-    learning_rate = 0.001
+    batch_size = 100
+    learning_rate = 0.01
     params = HyperParameters(learning_rate, max_epoch, batch_size, net_type=NetType.MultipleClassifier,
                              optimizer_name=OptimizerName.Adam, regular_name=RegularMethod.L2, regular_value=0.0001)
     dataReader = LoadData()
@@ -236,9 +186,8 @@ if __name__ == '__main__':
 
     net = Resnet_cifar10(params=params, model_name="ResNet_cifar10", block=BasicBlock, num_blocks=[2, 2, 2])
     print("start")
-    net.train(dataReader, checkpoint=1, need_test=True, file_name="resnet_single.csv")
+    net.train(dataReader, checkpoint=0.2, need_test=True, file_name="resnet_single.csv")
     print("end")
     time2 = time.time()
     print(f"total time: {time2 - time1}")
     # net.ShowLossHistory(XCoordinate.Iteration)
-

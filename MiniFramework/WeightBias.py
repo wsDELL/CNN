@@ -81,35 +81,42 @@ class WeightsBias(object):
 
     @staticmethod
     def InitialParameters(num_input, num_output, a=math.sqrt(5), init_method=InitialMethod.Kaiming_Uniform,
-                          nonlinearity='leaky_relu'):
+                          nonlinearity='leaky_relu', bias=True):
         if init_method == InitialMethod.Zero:
-            Weight = np.zeros((num_input, num_output)).astype('float32')
+            Weight = np.zeros((num_input, num_output)).astype(np.float32)
         elif init_method == InitialMethod.Uniform:
-            Weight = np.random.uniform(size=(num_input, num_output)).astype('float32')
+            Weight = np.random.uniform(size=(num_input, num_output)).astype(np.float32)
         elif init_method == InitialMethod.Normal:
-            Weight = np.random.normal(size=(num_input, num_output)).astype('float32')
+            Weight = np.random.normal(size=(num_input, num_output)).astype(np.float32)
         elif init_method == InitialMethod.MSRA:
-            Weight = np.random.normal(0, np.sqrt(2 / num_output), size=(num_input, num_output)).astype('float32')
+            Weight = np.random.normal(0, np.sqrt(2 / num_output), size=(num_input, num_output)).astype(np.float32)
         elif init_method == InitialMethod.Xavier_Uniform:
             gain = calculate_gain(nonlinearity)
             t = gain * math.sqrt(6.0 / float(num_output + num_input))
-            Weight = np.random.uniform(-t, t, size=(num_input, num_output)).astype('float32')
+            Weight = np.random.uniform(-t, t, size=(num_input, num_output)).astype(np.float32)
         elif init_method == InitialMethod.Xavier_Normal:
             gain = calculate_gain(nonlinearity)
             t = gain * math.sqrt(2.0 / float(num_output + num_input))
-            Weight = np.random.normal(0., t, size=(num_input, num_output)).astype('float32')
+            Weight = np.random.normal(0., t, size=(num_input, num_output)).astype(np.float32)
         elif init_method == InitialMethod.Kaiming_Uniform:
             gain = calculate_gain(nonlinearity, param=a)
             fan_in = num_input
             std = gain / math.sqrt(fan_in)
             bound = math.sqrt(3.0) * std
-            Weight = np.random.uniform(-bound, bound, size=(num_input, num_output)).astype('float32')
+            Weight = np.random.uniform(-bound, bound, size=(num_input, num_output)).astype(np.float32)
         elif init_method == InitialMethod.Kaiming_Normal:
             gain = calculate_gain(nonlinearity, param=a)
             fan_in = num_input
             std = gain / math.sqrt(fan_in)
-            Weight = np.random.normal(0., std, size=(num_input, num_output)).astype('float32')
+            Weight = np.random.normal(0., std, size=(num_input, num_output)).astype(np.float32)
+
         return Weight
+
+
+
+
+
+
 
     def CreateOptimizers(self):
         self.oW = OptimizerSelector.CreateOptimizer(self.lr, self.optimizer_name)

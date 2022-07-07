@@ -6,7 +6,7 @@ from MiniFramework.util import *
 
 
 class BatchNormalLayer(layer):
-    def __init__(self, input_size, layer_type='Batch Normalization', momentum=0.1, lr=0.01):
+    def __init__(self, input_size, layer_type='Batch Normalization', momentum=0.1, lr=0.1):
         super().__init__(layer_type)
         self.lr = lr
         self.gamma = np.ones((1, input_size)).astype('float32')

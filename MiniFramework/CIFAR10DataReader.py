@@ -28,7 +28,7 @@ class CIFAR10DataReader(object):
         self.training_data_order = None
 
     def ReadData(self):
-        self.XTrainRaw = self.XTrainRaw.astype('float32')
+        self.XTrainRaw = self.XTrainRaw.astype(np.float32)
         self.YTrainRaw = self.YTrainRaw.astype('int32')
         self.YTrainRaw = self.YTrainRaw.reshape(self.YTrainRaw.size, 1)
         assert (self.XTrainRaw.shape[0] == self.YTrainRaw.shape[0])
